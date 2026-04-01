@@ -21,7 +21,7 @@ Il workflow si attiva su push in `main` quando cambiano i file in `infra/**`.
 Configura i secrets nel repository:
 
 - `AWS_REGION`
-- **OIDC (consigliato)**: `AWS_ROLE_TO_ASSUME`
+- **OIDC (consigliato)**: `AWS_ROLE_TO_ASSUME` (arn)
 - **Oppure** access key: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
 - (Opzionale) `CF_STACK_NAME`
 - (Opzionale) `CF_BUCKET_NAME`
