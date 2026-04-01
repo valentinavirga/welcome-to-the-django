@@ -1,0 +1,37 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Welcome to the Django - minimal infrastructure
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+    Description: Deployment environment name.
+  BucketName:
+    Type: String
+    Default: ""
+    Description: Optional S3 bucket name. Leave empty to auto-generate.
+
+Conditions:
+  UseCustomBucketName: !Not [!Equals [!Ref BucketName, ""]]
+
+Resources:
+  AppBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        !If [UseCustomBucketName, !Ref BucketName, !Ref "AWS::NoValue"]
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Project
+          Value: welcome-to-the-django
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+Outputs:
+  BucketName:
+    Description: Deployed S3 bucket name
+    Value: !Ref AppBucket

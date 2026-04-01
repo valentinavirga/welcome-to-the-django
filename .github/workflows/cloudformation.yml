@@ -1,0 +1,59 @@
+name: Deploy CloudFormation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/**"
+      - ".github/workflows/cloudformation.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        if: ${{ secrets.AWS_ROLE_TO_ASSUME != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Configure AWS credentials (keys)
+        if: ${{ secrets.AWS_ROLE_TO_ASSUME == '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy stack
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          CF_STACK_NAME: ${{ secrets.CF_STACK_NAME }}
+          CF_BUCKET_NAME: ${{ secrets.CF_BUCKET_NAME }}
+        run: |
+          set -euo pipefail
+          REGION="${AWS_REGION}"
+          STACK_NAME="${CF_STACK_NAME:-welcome-to-the-django-prod}"
+          BUCKET_NAME="${CF_BUCKET_NAME}"
+
+          PARAM_OVERRIDES=("EnvironmentName=prod")
+          if [[ -n "${BUCKET_NAME}" ]]; then
+            PARAM_OVERRIDES+=("BucketName=${BUCKET_NAME}")
+          fi
+
+          aws cloudformation deploy \
+            --region "${REGION}" \
+            --template-file "infra/cloudformation/template.yml" \
+            --stack-name "${STACK_NAME}" \
+            --parameter-overrides "${PARAM_OVERRIDES[@]}" \
+            --capabilities CAPABILITY_NAMED_IAM
