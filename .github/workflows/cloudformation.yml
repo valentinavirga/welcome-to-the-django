@@ -51,9 +51,21 @@ jobs:
             PARAM_OVERRIDES=("${FILTERED[@]}" "BucketName=${BUCKET_NAME}")
           fi
 
+          set +e
           aws cloudformation deploy \
             --region "${REGION}" \
             --template-file "infra/cloudformation/template.yml" \
             --stack-name "${STACK_NAME}" \
             --parameter-overrides "${PARAM_OVERRIDES[@]}" \
             --capabilities CAPABILITY_NAMED_IAM
+          DEPLOY_EXIT=$?
+          set -e
+
+          if [[ ${DEPLOY_EXIT} -ne 0 ]]; then
+            echo "Deploy failed. Latest CloudFormation events:"
+            aws cloudformation describe-stack-events \
+              --region "${REGION}" \
+              --stack-name "${STACK_NAME}" \
+              --max-items 40 || true
+            exit ${DEPLOY_EXIT}
+          fi
