@@ -35,10 +35,20 @@ jobs:
           REGION="${AWS_REGION}"
           STACK_NAME="${CF_STACK_NAME:-welcome-to-the-django-prod}"
           BUCKET_NAME="${CF_BUCKET_NAME}"
+          PARAM_FILE="infra/parameters/prod.json"
 
-          PARAM_OVERRIDES=("EnvironmentName=prod")
+          mapfile -t PARAM_OVERRIDES < <(
+            jq -r '.Parameters | to_entries[] | "\(.key)=\(.value|tostring)"' "${PARAM_FILE}"
+          )
+
           if [[ -n "${BUCKET_NAME}" ]]; then
-            PARAM_OVERRIDES+=("BucketName=${BUCKET_NAME}")
+            FILTERED=()
+            for p in "${PARAM_OVERRIDES[@]}"; do
+              if [[ "${p}" != BucketName=* ]]; then
+                FILTERED+=("${p}")
+              fi
+            done
+            PARAM_OVERRIDES=("${FILTERED[@]}" "BucketName=${BUCKET_NAME}")
           fi
 
           aws cloudformation deploy \
