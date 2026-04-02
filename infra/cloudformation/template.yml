@@ -13,9 +13,59 @@ Parameters:
     Type: String
     Default: ""
     Description: Optional S3 bucket name. Leave empty to auto-generate.
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC where EC2 and RDS will be deployed.
+  Ec2SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Public subnet for the EC2 instance.
+  DbSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: At least two private subnets for the PostgreSQL instance.
+  KeyPairName:
+    Type: String
+    Default: ""
+    Description: Optional EC2 key pair for SSH access.
+  SshCidr:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: CIDR block allowed to connect to EC2 via SSH.
+  Ec2InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t2.micro
+      - t3.micro
+      - t3.small
+      - t3.medium
+    Description: EC2 instance size.
+  DbInstanceClass:
+    Type: String
+    Default: db.t4g.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t4g.micro
+      - db.t4g.small
+      - db.t4g.medium
+    Description: RDS instance class.
+  DbName:
+    Type: String
+    Default: appdb
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters.
+    Description: Initial PostgreSQL database name.
+  DbMasterUsername:
+    Type: String
+    Default: postgres
+    MinLength: 1
+    MaxLength: 16
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters.
+    Description: Master username for PostgreSQL.
 
 Conditions:
   UseCustomBucketName: !Not [!Equals [!Ref BucketName, ""]]
+  UseKeyPair: !Not [!Equals [!Ref KeyPairName, ""]]
 
 Resources:
   AppBucket:
@@ -31,7 +81,137 @@ Resources:
         - Key: Environment
           Value: !Ref EnvironmentName
 
+  Ec2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for the Django EC2 instance
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref SshCidr
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-django-ec2-sg"
+        - Key: Project
+          Value: welcome-to-the-django
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  DbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for the PostgreSQL database
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref Ec2SecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-django-db-sg"
+        - Key: Project
+          Value: welcome-to-the-django
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  DbSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnets for the PostgreSQL database
+      SubnetIds: !Ref DbSubnetIds
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-django-db-subnets"
+        - Key: Project
+          Value: welcome-to-the-django
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  DbMasterSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: !Sub "Master credentials for ${EnvironmentName} PostgreSQL"
+      GenerateSecretString:
+        SecretStringTemplate: !Sub '{"username":"${DbMasterUsername}"}'
+        GenerateStringKey: password
+        ExcludeCharacters: '"@/\\'
+      Tags:
+        - Key: Project
+          Value: welcome-to-the-django
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  DatabaseInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub "${EnvironmentName}-django-postgres"
+      AllocatedStorage: 20
+      MaxAllocatedStorage: 100
+      DBInstanceClass: !Ref DbInstanceClass
+      Engine: postgres
+      EngineVersion: "16.3"
+      DBName: !Ref DbName
+      MasterUsername: !Sub "{{resolve:secretsmanager:${DbMasterSecret}:SecretString:username}}"
+      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DbMasterSecret}:SecretString:password}}"
+      DBSubnetGroupName: !Ref DbSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DbSecurityGroup
+      PubliclyAccessible: false
+      MultiAZ: false
+      StorageEncrypted: true
+      BackupRetentionPeriod: 7
+      DeletionProtection: false
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-django-postgres"
+        - Key: Project
+          Value: welcome-to-the-django
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  Ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref Ec2InstanceType
+      SubnetId: !Ref Ec2SubnetId
+      SecurityGroupIds:
+        - !Ref Ec2SecurityGroup
+      KeyName: !If [UseKeyPair, !Ref KeyPairName, !Ref "AWS::NoValue"]
+      ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}"
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-django-ec2"
+        - Key: Project
+          Value: welcome-to-the-django
+        - Key: Environment
+          Value: !Ref EnvironmentName
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          dnf update -y
+          dnf install -y postgresql16
+
 Outputs:
   BucketName:
     Description: Deployed S3 bucket name
     Value: !Ref AppBucket
+  Ec2InstanceId:
+    Description: EC2 instance ID
+    Value: !Ref Ec2Instance
+  Ec2PublicIp:
+    Description: EC2 public IP address
+    Value: !GetAtt Ec2Instance.PublicIp
+  DatabaseEndpoint:
+    Description: PostgreSQL endpoint
+    Value: !GetAtt DatabaseInstance.Endpoint.Address
+  DatabasePort:
+    Description: PostgreSQL port
+    Value: !GetAtt DatabaseInstance.Endpoint.Port
+  DatabaseSecretArn:
+    Description: Secrets Manager ARN containing the PostgreSQL credentials
+    Value: !Ref DbMasterSecret
