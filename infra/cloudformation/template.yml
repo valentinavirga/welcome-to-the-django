@@ -77,11 +77,21 @@ Parameters:
       - "true"
       - "false"
     Description: When true, creates only IAM bootstrap roles.
+  CreateDatabase:
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: When false, skips RDS resources for faster deploys.
 
 Conditions:
   UseCustomBucketName: !Not [!Equals [!Ref BucketName, ""]]
   UseKeyPair: !Not [!Equals [!Ref KeyPairName, ""]]
   CreateAppResources: !Equals [!Ref BootstrapOnly, "false"]
+  CreateDatabaseResources: !And
+    - !Condition CreateAppResources
+    - !Equals [!Ref CreateDatabase, "true"]
 
 Resources:
   GitHubActionsDeployRole:
@@ -287,7 +297,7 @@ Resources:
 
   DbSecurityGroup:
     Type: AWS::EC2::SecurityGroup
-    Condition: CreateAppResources
+    Condition: CreateDatabaseResources
     Properties:
       GroupDescription: Security group for the PostgreSQL database
       VpcId: !Ref VpcId
@@ -306,7 +316,7 @@ Resources:
 
   DbSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
-    Condition: CreateAppResources
+    Condition: CreateDatabaseResources
     Properties:
       DBSubnetGroupDescription: Subnets for the PostgreSQL database
       SubnetIds: !Ref DbSubnetIds
@@ -320,7 +330,7 @@ Resources:
 
   DbMasterSecret:
     Type: AWS::SecretsManager::Secret
-    Condition: CreateAppResources
+    Condition: CreateDatabaseResources
     Properties:
       Description: !Sub "Master credentials for ${EnvironmentName} PostgreSQL"
       GenerateSecretString:
@@ -335,7 +345,7 @@ Resources:
 
   DatabaseInstance:
     Type: AWS::RDS::DBInstance
-    Condition: CreateAppResources
+    Condition: CreateDatabaseResources
     DeletionPolicy: Snapshot
     UpdateReplacePolicy: Snapshot
     Properties:
@@ -401,15 +411,15 @@ Outputs:
     Description: EC2 public IP address
     Value: !GetAtt Ec2Instance.PublicIp
   DatabaseEndpoint:
-    Condition: CreateAppResources
+    Condition: CreateDatabaseResources
     Description: PostgreSQL endpoint
     Value: !GetAtt DatabaseInstance.Endpoint.Address
   DatabasePort:
-    Condition: CreateAppResources
+    Condition: CreateDatabaseResources
     Description: PostgreSQL port
     Value: !GetAtt DatabaseInstance.Endpoint.Port
   DatabaseSecretArn:
-    Condition: CreateAppResources
+    Condition: CreateDatabaseResources
     Description: Secrets Manager ARN containing the PostgreSQL credentials
     Value: !Ref DbMasterSecret
   GitHubActionsDeployRoleArn:

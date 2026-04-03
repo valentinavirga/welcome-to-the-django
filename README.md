@@ -36,6 +36,10 @@ Per creare anche `EC2` e `PostgreSQL`, aggiorna i file in `infra/parameters/*.js
 - `KeyPairName` (opzionale, per accesso SSH)
 - `SshCidr` (meglio restringerlo al proprio IP)
 
+Per deploy piu veloci durante test/iterazioni, puoi impostare:
+
+- `CreateDatabase`: `"false"` (salta la creazione di `RDS`, riducendo molto i tempi)
+
 Il template ora crea:
 
 - bucket `S3`

@@ -9,6 +9,7 @@
     "SshCidr": "79.40.24.237/32",
     "Ec2InstanceType": "t3.micro",
     "DbInstanceClass": "db.t4g.micro",
+    "CreateDatabase": "true",
     "DbName": "appdb",
     "DbMasterUsername": "postgres"
   }
