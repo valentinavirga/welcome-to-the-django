@@ -67,6 +67,93 @@ Conditions:
   UseCustomBucketName: !Not [!Equals [!Ref BucketName, ""]]
   UseKeyPair: !Not [!Equals [!Ref KeyPairName, ""]]
 
+#CloudFormation template for IAM policy
+Type: AWS::IAM::Policy
+Properties:
+  PolicyName: Policy 1
+  PolicyDocument:
+    Version: 2012-10-17
+    Statement:
+      - Sid: AllowCloudFormationActions
+        Effect: Allow
+        Action:
+          - cloudformation:*
+        Resource: "*"
+      - Sid: AllowEC2Actions
+        Effect: Allow
+        Action:
+          - ec2:CreateSecurityGroup
+          - ec2:DeleteSecurityGroup
+          - ec2:DescribeSecurityGroups
+          - ec2:DescribeVpcs
+          - ec2:DescribeSubnets
+          - ec2:DescribeAvailabilityZones
+          - ec2:DescribeRouteTables
+          - ec2:CreateTags
+          - ec2:DeleteTags
+          - ec2:RunInstances
+          - ec2:TerminateInstances
+          - ec2:DescribeInstances
+          - ec2:DescribeImages
+          - ec2:AuthorizeSecurityGroupIngress
+          - ec2:RevokeSecurityGroupIngress
+        Resource: "*"
+      - Sid: AllowRDSActions
+        Effect: Allow
+        Action:
+          - rds:CreateDBSubnetGroup
+          - rds:DeleteDBSubnetGroup
+          - rds:DescribeDBSubnetGroups
+          - rds:CreateDBInstance
+          - rds:DeleteDBInstance
+          - rds:DescribeDBInstances
+          - rds:ModifyDBInstance
+          - rds:AddTagsToResource
+          - rds:RemoveTagsFromResource
+          - rds:ListTagsForResource
+        Resource: "*"
+      - Sid: AllowSecretsManagerActions
+        Effect: Allow
+        Action:
+          - secretsmanager:CreateSecret
+          - secretsmanager:DeleteSecret
+          - secretsmanager:DescribeSecret
+          - secretsmanager:GetSecretValue
+          - secretsmanager:GetRandomPassword
+          - secretsmanager:TagResource
+          - secretsmanager:UntagResource
+        Resource: "*"
+      - Sid: AllowS3Actions
+        Effect: Allow
+        Action:
+          - s3:CreateBucket
+          - s3:DeleteBucket
+          - s3:GetBucketVersioning
+          - s3:PutBucketVersioning
+          - s3:GetObject
+          - s3:PutObject
+          - s3:DeleteObject
+          - s3:ListBucket
+          - s3:GetBucketTagging
+          - s3:PutBucketTagging
+        Resource: "*"
+      - Sid: AllowSSMPublicAmi
+        Effect: Allow
+        Action:
+          - ssm:GetParameter
+          - ssm:GetParameters
+        Resource: arn:aws:ssm:*::parameter/aws/service/ami-amazon-linux-latest/*
+      - Sid: AllowIAMPassRole
+        Effect: Allow
+        Action:
+          - iam:PassRole
+          - iam:CreateRole
+          - iam:DeleteRole
+          - iam:GetRole
+          - iam:PutRolePolicy
+          - iam:DeleteRolePolicy
+        Resource: "*"
+
 Resources:
   AppBucket:
     Type: AWS::S3::Bucket
