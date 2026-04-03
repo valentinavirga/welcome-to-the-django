@@ -139,12 +139,14 @@ Resources:
                   - rds:DescribeDBSubnetGroups
                   - rds:CreateDBInstance
                   - rds:DeleteDBInstance
+                  - rds:CreateDBSnapshot
                   - rds:DescribeDBInstances
                   - rds:ModifyDBInstance
                   - rds:DescribeDBEngineVersions
                   - rds:AddTagsToResource
                   - rds:RemoveTagsFromResource
                   - rds:ListTagsForResource
+                  - iam:GetRole
                 Resource: "*"
               - Sid: AllowSecretsManagerActions
                 Effect: Allow
@@ -220,12 +222,14 @@ Resources:
                   - rds:DescribeDBSubnetGroups
                   - rds:CreateDBInstance
                   - rds:DeleteDBInstance
+                  - rds:CreateDBSnapshot
                   - rds:DescribeDBInstances
                   - rds:ModifyDBInstance
                   - rds:DescribeDBEngineVersions
                   - rds:AddTagsToResource
                   - rds:RemoveTagsFromResource
                   - rds:ListTagsForResource
+                  - iam:GetRole
                   - secretsmanager:CreateSecret
                   - secretsmanager:DeleteSecret
                   - secretsmanager:DescribeSecret
