@@ -16,6 +16,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      CF_STACK_NAME: ${{ secrets.CF_STACK_NAME != '' && secrets.CF_STACK_NAME || 'welcome-to-the-django-prod' }}
+      CF_BUCKET_NAME: ${{ secrets.CF_BUCKET_NAME }}
       CF_DEPLOY_ROLE_ARN: ${{ secrets.CF_DEPLOY_ROLE_ARN }}
     steps:
       - name: Checkout
@@ -25,27 +28,22 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ contains(secrets.AWS_ROLE_TO_ASSUME, 'arn:aws:iam::') && secrets.AWS_ROLE_TO_ASSUME || format('arn:aws:iam::{0}:role/{1}', secrets.AWS_ACCOUNT_ID, secrets.AWS_ROLE_TO_ASSUME) }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Bootstrap IAM roles (first run)
         if: env.CF_DEPLOY_ROLE_ARN == ''
         env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          CF_STACK_NAME: ${{ secrets.CF_STACK_NAME }}
-          CF_BUCKET_NAME: ${{ secrets.CF_BUCKET_NAME }}
           CF_BOOTSTRAP_ONLY: "true"
         run: bash .github/scripts/deploy_cloudformation.sh
 
       - name: Resolve execution role ARN from stack outputs
         if: env.CF_DEPLOY_ROLE_ARN == ''
-        env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          CF_STACK_NAME: ${{ secrets.CF_STACK_NAME }}
         run: |
           set -euo pipefail
+          STACK_NAME="${CF_STACK_NAME:-welcome-to-the-django-prod}"
           ROLE_ARN="$(aws cloudformation describe-stacks \
             --region "${AWS_REGION}" \
-            --stack-name "${CF_STACK_NAME}" \
+            --stack-name "${STACK_NAME}" \
             --query "Stacks[0].Outputs[?OutputKey=='CloudFormationExecutionRoleArn'].OutputValue" \
             --output text)"
           if [[ -z "${ROLE_ARN}" || "${ROLE_ARN}" == "None" ]]; then
@@ -56,8 +54,5 @@ jobs:
 
       - name: Deploy stack
         env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          CF_STACK_NAME: ${{ secrets.CF_STACK_NAME }}
-          CF_BUCKET_NAME: ${{ secrets.CF_BUCKET_NAME }}
           CF_BOOTSTRAP_ONLY: "false"
         run: bash .github/scripts/deploy_cloudformation.sh
