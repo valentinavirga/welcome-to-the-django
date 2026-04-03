@@ -25,6 +25,16 @@ jobs:
           role-to-assume: ${{ contains(secrets.AWS_ROLE_TO_ASSUME, 'arn:aws:iam::') && secrets.AWS_ROLE_TO_ASSUME || format('arn:aws:iam::{0}:role/{1}', secrets.AWS_ACCOUNT_ID, secrets.AWS_ROLE_TO_ASSUME) }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Validate execution role secret
+        env:
+          CF_DEPLOY_ROLE_ARN: ${{ secrets.CF_DEPLOY_ROLE_ARN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CF_DEPLOY_ROLE_ARN:-}" ]]; then
+            echo "CF_DEPLOY_ROLE_ARN is empty. Set this secret to the CloudFormation execution role ARN."
+            exit 1
+          fi
+
       - name: Deploy stack
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
