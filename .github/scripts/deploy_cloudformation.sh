@@ -8,6 +8,22 @@ DEPLOY_ROLE_ARN="${CF_DEPLOY_ROLE_ARN:-}"
 BOOTSTRAP_ONLY="${CF_BOOTSTRAP_ONLY:-false}"
 PARAM_FILE="infra/parameters/prod.json"
 
+STACK_STATUS="$(aws cloudformation describe-stacks \
+  --region "${REGION}" \
+  --stack-name "${STACK_NAME}" \
+  --query 'Stacks[0].StackStatus' \
+  --output text 2>/dev/null || true)"
+
+if [[ "${STACK_STATUS}" == "ROLLBACK_COMPLETE" ]]; then
+  echo "Stack ${STACK_NAME} is in ROLLBACK_COMPLETE. Deleting before redeploy..."
+  aws cloudformation delete-stack \
+    --region "${REGION}" \
+    --stack-name "${STACK_NAME}"
+  aws cloudformation wait stack-delete-complete \
+    --region "${REGION}" \
+    --stack-name "${STACK_NAME}"
+fi
+
 mapfile -t PARAM_OVERRIDES < <(
   jq -r '.Parameters | to_entries[] | "\(.key)=\(.value|tostring)"' "${PARAM_FILE}"
 )
