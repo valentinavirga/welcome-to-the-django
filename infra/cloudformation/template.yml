@@ -350,7 +350,7 @@ Resources:
       PubliclyAccessible: false
       MultiAZ: false
       StorageEncrypted: true
-      BackupRetentionPeriod: 7
+      BackupRetentionPeriod: 1
       DeletionProtection: false
       Tags:
         - Key: Name

@@ -42,3 +42,5 @@ Il template ora crea:
 - istanza `EC2` Amazon Linux 2023
 - database `RDS PostgreSQL`
 - secret automatico in `Secrets Manager` per le credenziali DB
+
+Nota: l'istanza `RDS` usa una retention backup di `1` giorno per restare compatibile con account AWS Free Tier / piano gratuito.
