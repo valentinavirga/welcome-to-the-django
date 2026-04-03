@@ -30,4 +30,5 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           CF_STACK_NAME: ${{ secrets.CF_STACK_NAME }}
           CF_BUCKET_NAME: ${{ secrets.CF_BUCKET_NAME }}
+          CF_DEPLOY_ROLE_ARN: ${{ secrets.CF_DEPLOY_ROLE_ARN }}
         run: bash .github/scripts/deploy_cloudformation.sh

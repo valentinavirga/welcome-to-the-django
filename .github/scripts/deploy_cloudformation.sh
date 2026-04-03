@@ -4,6 +4,7 @@ set -euo pipefail
 REGION="${AWS_REGION}"
 STACK_NAME="${CF_STACK_NAME:-welcome-to-the-django-prod}"
 BUCKET_NAME="${CF_BUCKET_NAME}"
+DEPLOY_ROLE_ARN="${CF_DEPLOY_ROLE_ARN:-}"
 PARAM_FILE="infra/parameters/prod.json"
 
 mapfile -t PARAM_OVERRIDES < <(
@@ -21,12 +22,19 @@ if [[ -n "${BUCKET_NAME}" ]]; then
 fi
 
 set +e
-aws cloudformation deploy \
-  --region "${REGION}" \
-  --template-file "infra/cloudformation/template.yml" \
-  --stack-name "${STACK_NAME}" \
-  --parameter-overrides "${PARAM_OVERRIDES[@]}" \
+DEPLOY_ARGS=(
+  --region "${REGION}"
+  --template-file "infra/cloudformation/template.yml"
+  --stack-name "${STACK_NAME}"
+  --parameter-overrides "${PARAM_OVERRIDES[@]}"
   --capabilities CAPABILITY_NAMED_IAM
+)
+
+if [[ -n "${DEPLOY_ROLE_ARN}" ]]; then
+  DEPLOY_ARGS+=(--role-arn "${DEPLOY_ROLE_ARN}")
+fi
+
+aws cloudformation deploy "${DEPLOY_ARGS[@]}"
 DEPLOY_EXIT=$?
 set -e
 

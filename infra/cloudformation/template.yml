@@ -62,99 +62,184 @@ Parameters:
     AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
     ConstraintDescription: Must begin with a letter and contain only alphanumeric characters.
     Description: Master username for PostgreSQL.
+  GitHubRepository:
+    Type: String
+    Default: "vally/welcome-to-the-django"
+    Description: GitHub repository in owner/repo format allowed to assume the OIDC deploy role.
+  GitHubBranch:
+    Type: String
+    Default: "main"
+    Description: Git branch allowed to assume the OIDC deploy role.
 
 Conditions:
   UseCustomBucketName: !Not [!Equals [!Ref BucketName, ""]]
   UseKeyPair: !Not [!Equals [!Ref KeyPairName, ""]]
 
-#CloudFormation template for IAM policy
-Type: AWS::IAM::Policy
-Properties:
-  PolicyName: Policy 1
-  PolicyDocument:
-    Version: 2012-10-17
-    Statement:
-      - Sid: AllowCloudFormationActions
-        Effect: Allow
-        Action:
-          - cloudformation:*
-        Resource: "*"
-      - Sid: AllowEC2Actions
-        Effect: Allow
-        Action:
-          - ec2:CreateSecurityGroup
-          - ec2:DeleteSecurityGroup
-          - ec2:DescribeSecurityGroups
-          - ec2:DescribeVpcs
-          - ec2:DescribeSubnets
-          - ec2:DescribeAvailabilityZones
-          - ec2:DescribeRouteTables
-          - ec2:CreateTags
-          - ec2:DeleteTags
-          - ec2:RunInstances
-          - ec2:TerminateInstances
-          - ec2:DescribeInstances
-          - ec2:DescribeImages
-          - ec2:AuthorizeSecurityGroupIngress
-          - ec2:RevokeSecurityGroupIngress
-        Resource: "*"
-      - Sid: AllowRDSActions
-        Effect: Allow
-        Action:
-          - rds:CreateDBSubnetGroup
-          - rds:DeleteDBSubnetGroup
-          - rds:DescribeDBSubnetGroups
-          - rds:CreateDBInstance
-          - rds:DeleteDBInstance
-          - rds:DescribeDBInstances
-          - rds:ModifyDBInstance
-          - rds:AddTagsToResource
-          - rds:RemoveTagsFromResource
-          - rds:ListTagsForResource
-        Resource: "*"
-      - Sid: AllowSecretsManagerActions
-        Effect: Allow
-        Action:
-          - secretsmanager:CreateSecret
-          - secretsmanager:DeleteSecret
-          - secretsmanager:DescribeSecret
-          - secretsmanager:GetSecretValue
-          - secretsmanager:GetRandomPassword
-          - secretsmanager:TagResource
-          - secretsmanager:UntagResource
-        Resource: "*"
-      - Sid: AllowS3Actions
-        Effect: Allow
-        Action:
-          - s3:CreateBucket
-          - s3:DeleteBucket
-          - s3:GetBucketVersioning
-          - s3:PutBucketVersioning
-          - s3:GetObject
-          - s3:PutObject
-          - s3:DeleteObject
-          - s3:ListBucket
-          - s3:GetBucketTagging
-          - s3:PutBucketTagging
-        Resource: "*"
-      - Sid: AllowSSMPublicAmi
-        Effect: Allow
-        Action:
-          - ssm:GetParameter
-          - ssm:GetParameters
-        Resource: arn:aws:ssm:*::parameter/aws/service/ami-amazon-linux-latest/*
-      - Sid: AllowIAMPassRole
-        Effect: Allow
-        Action:
-          - iam:PassRole
-          - iam:CreateRole
-          - iam:DeleteRole
-          - iam:GetRole
-          - iam:PutRolePolicy
-          - iam:DeleteRolePolicy
-        Resource: "*"
-
 Resources:
+  GitHubActionsDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${EnvironmentName}-deploy-aws-cloudformation"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Sub "arn:aws:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com"
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubRepository}:ref:refs/heads/${GitHubBranch}"
+      Policies:
+        - PolicyName: !Sub "${EnvironmentName}-github-actions-deploy-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowCloudFormationActions
+                Effect: Allow
+                Action:
+                  - cloudformation:*
+                Resource: "*"
+              - Sid: AllowEC2Actions
+                Effect: Allow
+                Action:
+                  - ec2:CreateSecurityGroup
+                  - ec2:DeleteSecurityGroup
+                  - ec2:DescribeSecurityGroups
+                  - ec2:DescribeVpcs
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeAvailabilityZones
+                  - ec2:DescribeRouteTables
+                  - ec2:CreateTags
+                  - ec2:DeleteTags
+                  - ec2:RunInstances
+                  - ec2:TerminateInstances
+                  - ec2:DescribeInstances
+                  - ec2:DescribeImages
+                  - ec2:DescribeKeyPairs
+                  - ec2:AuthorizeSecurityGroupIngress
+                  - ec2:RevokeSecurityGroupIngress
+                Resource: "*"
+              - Sid: AllowRDSActions
+                Effect: Allow
+                Action:
+                  - rds:CreateDBSubnetGroup
+                  - rds:ModifyDBSubnetGroup
+                  - rds:DeleteDBSubnetGroup
+                  - rds:DescribeDBSubnetGroups
+                  - rds:CreateDBInstance
+                  - rds:DeleteDBInstance
+                  - rds:DescribeDBInstances
+                  - rds:ModifyDBInstance
+                  - rds:DescribeDBEngineVersions
+                  - rds:AddTagsToResource
+                  - rds:RemoveTagsFromResource
+                  - rds:ListTagsForResource
+                Resource: "*"
+              - Sid: AllowSecretsManagerActions
+                Effect: Allow
+                Action:
+                  - secretsmanager:CreateSecret
+                  - secretsmanager:DeleteSecret
+                  - secretsmanager:DescribeSecret
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:GetRandomPassword
+                  - secretsmanager:UpdateSecret
+                  - secretsmanager:TagResource
+                  - secretsmanager:UntagResource
+                Resource: "*"
+              - Sid: AllowS3Actions
+                Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:DeleteBucket
+                  - s3:GetBucketVersioning
+                  - s3:PutBucketVersioning
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                  - s3:GetBucketTagging
+                  - s3:PutBucketTagging
+                Resource: "*"
+              - Sid: AllowSSMPublicAmi
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource: arn:aws:ssm:*::parameter/aws/service/ami-amazon-linux-latest/*
+
+  CloudFormationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${EnvironmentName}-cloudformation-execution-role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: !Sub "${EnvironmentName}-cloudformation-execution-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: AllowCloudFormationResourceActions
+                Effect: Allow
+                Action:
+                  - ec2:CreateSecurityGroup
+                  - ec2:DeleteSecurityGroup
+                  - ec2:DescribeSecurityGroups
+                  - ec2:DescribeVpcs
+                  - ec2:DescribeSubnets
+                  - ec2:DescribeAvailabilityZones
+                  - ec2:DescribeRouteTables
+                  - ec2:CreateTags
+                  - ec2:DeleteTags
+                  - ec2:RunInstances
+                  - ec2:TerminateInstances
+                  - ec2:DescribeInstances
+                  - ec2:DescribeImages
+                  - ec2:DescribeKeyPairs
+                  - ec2:AuthorizeSecurityGroupIngress
+                  - ec2:RevokeSecurityGroupIngress
+                  - rds:CreateDBSubnetGroup
+                  - rds:ModifyDBSubnetGroup
+                  - rds:DeleteDBSubnetGroup
+                  - rds:DescribeDBSubnetGroups
+                  - rds:CreateDBInstance
+                  - rds:DeleteDBInstance
+                  - rds:DescribeDBInstances
+                  - rds:ModifyDBInstance
+                  - rds:DescribeDBEngineVersions
+                  - rds:AddTagsToResource
+                  - rds:RemoveTagsFromResource
+                  - rds:ListTagsForResource
+                  - secretsmanager:CreateSecret
+                  - secretsmanager:DeleteSecret
+                  - secretsmanager:DescribeSecret
+                  - secretsmanager:GetSecretValue
+                  - secretsmanager:GetRandomPassword
+                  - secretsmanager:UpdateSecret
+                  - secretsmanager:TagResource
+                  - secretsmanager:UntagResource
+                  - s3:CreateBucket
+                  - s3:DeleteBucket
+                  - s3:GetBucketVersioning
+                  - s3:PutBucketVersioning
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:ListBucket
+                  - s3:GetBucketTagging
+                  - s3:PutBucketTagging
+                  - ssm:GetParameter
+                  - ssm:GetParameters
+                Resource: "*"
+
   AppBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -302,3 +387,9 @@ Outputs:
   DatabaseSecretArn:
     Description: Secrets Manager ARN containing the PostgreSQL credentials
     Value: !Ref DbMasterSecret
+  GitHubActionsDeployRoleArn:
+    Description: IAM role ARN to use in GitHub OIDC (AWS_ROLE_TO_ASSUME)
+    Value: !GetAtt GitHubActionsDeployRole.Arn
+  CloudFormationExecutionRoleArn:
+    Description: IAM role ARN for CloudFormation service execution (CF_DEPLOY_ROLE_ARN)
+    Value: !GetAtt CloudFormationExecutionRole.Arn
