@@ -34,7 +34,7 @@ Per creare solo i ruoli IAM iniziali via template CloudFormation:
    - `AWS_REGION`
    - (Opzionale) `CF_STACK_NAME` (default: `welcome-to-the-django-prod`)
    - (Opzionale) `ENVIRONMENT_NAME` (default: `prod`)
-   - (Opzionale) `GITHUB_REPOSITORY` (default: `vally/welcome-to-the-django`)
+   - (Opzionale) `GITHUB_REPOSITORY` (default: `valentinavirga/welcome-to-the-django`)
    - (Opzionale) `GITHUB_BRANCH` (default: `main`)
 
 2. Esegui:

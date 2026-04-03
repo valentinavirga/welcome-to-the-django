@@ -67,7 +67,7 @@ Parameters:
     Description: Master username for PostgreSQL.
   GitHubRepository:
     Type: String
-    Default: "vally/welcome-to-the-django"
+    Default: "valentinavirga/welcome-to-the-django"
     Description: GitHub repository in owner/repo format allowed to assume the OIDC deploy role.
   GitHubBranch:
     Type: String

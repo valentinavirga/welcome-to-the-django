@@ -5,7 +5,7 @@ set -euo pipefail
 
 STACK_NAME="${CF_STACK_NAME:-welcome-to-the-django-prod}"
 ENVIRONMENT_NAME="${ENVIRONMENT_NAME:-prod}"
-GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-vally/welcome-to-the-django}"
+GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-valentinavirga/welcome-to-the-django}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
 
 echo "[bootstrap] region=${AWS_REGION} stack=${STACK_NAME} env=${ENVIRONMENT_NAME} repo=${GITHUB_REPOSITORY} branch=${GITHUB_BRANCH}"
