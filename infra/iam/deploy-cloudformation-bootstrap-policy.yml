@@ -1,0 +1,28 @@
+Version: "2012-10-17"
+Statement:
+  - Sid: AllowBootstrapIamRoles
+    Effect: Allow
+    Action:
+      - iam:GetRole
+      - iam:CreateRole
+      - iam:DeleteRole
+      - iam:PutRolePolicy
+      - iam:DeleteRolePolicy
+      - iam:AttachRolePolicy
+      - iam:DetachRolePolicy
+      - iam:TagRole
+      - iam:UntagRole
+      - iam:UpdateAssumeRolePolicy
+      - iam:PassRole
+    Resource:
+      - arn:aws:iam::746412758813:role/prod-deploy-aws-cloudformation
+      - arn:aws:iam::746412758813:role/prod-cloudformation-execution-role
+  - Sid: AllowReadForValidation
+    Effect: Allow
+    Action:
+      - ec2:DescribeSubnets
+      - ec2:DescribeVpcs
+      - ec2:DescribeRouteTables
+      - ec2:DescribeAvailabilityZones
+      - ec2:DescribeSecurityGroups
+    Resource: "*"
