@@ -26,6 +26,26 @@ Configura i secrets nel repository:
 - (Opzionale) `CF_STACK_NAME`
 - (Opzionale) `CF_BUCKET_NAME`
 
+## Bootstrap IAM da terminale (senza click)
+
+Per creare solo i ruoli IAM iniziali via template CloudFormation:
+
+1. Esporta variabili minime:
+   - `AWS_REGION`
+   - (Opzionale) `CF_STACK_NAME` (default: `welcome-to-the-django-prod`)
+   - (Opzionale) `ENVIRONMENT_NAME` (default: `prod`)
+   - (Opzionale) `GITHUB_REPOSITORY` (default: `vally/welcome-to-the-django`)
+   - (Opzionale) `GITHUB_BRANCH` (default: `main`)
+
+2. Esegui:
+
+   `.github/scripts/bootstrap_iam_roles.sh`
+
+Lo script fa deploy con `BootstrapOnly=true` e `CreateDatabase=false`, poi stampa i valori da salvare nei secrets GitHub:
+
+- `AWS_ROLE_TO_ASSUME`
+- `CF_DEPLOY_ROLE_ARN`
+
 ## Nuovi parametri infrastrutturali
 
 Per creare anche `EC2` e `PostgreSQL`, aggiorna i file in `infra/parameters/*.json` con valori reali per:
