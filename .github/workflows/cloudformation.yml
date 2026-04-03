@@ -16,7 +16,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      CF_DEPLOY_ROLE_ARN_SECRET: ${{ secrets.CF_DEPLOY_ROLE_ARN }}
+      CF_DEPLOY_ROLE_ARN: ${{ secrets.CF_DEPLOY_ROLE_ARN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Bootstrap IAM roles (first run)
-        if: env.CF_DEPLOY_ROLE_ARN_SECRET == ''
+        if: env.CF_DEPLOY_ROLE_ARN == ''
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           CF_STACK_NAME: ${{ secrets.CF_STACK_NAME }}
@@ -37,7 +37,7 @@ jobs:
         run: bash .github/scripts/deploy_cloudformation.sh
 
       - name: Resolve execution role ARN from stack outputs
-        if: env.CF_DEPLOY_ROLE_ARN_SECRET == ''
+        if: env.CF_DEPLOY_ROLE_ARN == ''
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           CF_STACK_NAME: ${{ secrets.CF_STACK_NAME }}
@@ -59,6 +59,5 @@ jobs:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           CF_STACK_NAME: ${{ secrets.CF_STACK_NAME }}
           CF_BUCKET_NAME: ${{ secrets.CF_BUCKET_NAME }}
-          CF_DEPLOY_ROLE_ARN: ${{ secrets.CF_DEPLOY_ROLE_ARN != '' && secrets.CF_DEPLOY_ROLE_ARN || env.CF_DEPLOY_ROLE_ARN }}
           CF_BOOTSTRAP_ONLY: "false"
         run: bash .github/scripts/deploy_cloudformation.sh
