@@ -53,6 +53,7 @@ jobs:
           echo "CF_DEPLOY_ROLE_ARN=${ROLE_ARN}" >> "${GITHUB_ENV}"
 
       - name: Deploy stack
+        timeout-minutes: 60
         env:
           CF_BOOTSTRAP_ONLY: "false"
         run: bash .github/scripts/deploy_cloudformation.sh
