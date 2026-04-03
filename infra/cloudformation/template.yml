@@ -70,10 +70,18 @@ Parameters:
     Type: String
     Default: "main"
     Description: Git branch allowed to assume the OIDC deploy role.
+  BootstrapOnly:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: When true, creates only IAM bootstrap roles.
 
 Conditions:
   UseCustomBucketName: !Not [!Equals [!Ref BucketName, ""]]
   UseKeyPair: !Not [!Equals [!Ref KeyPairName, ""]]
+  CreateAppResources: !Equals [!Ref BootstrapOnly, "false"]
 
 Resources:
   GitHubActionsDeployRole:
@@ -242,6 +250,7 @@ Resources:
 
   AppBucket:
     Type: AWS::S3::Bucket
+    Condition: CreateAppResources
     Properties:
       BucketName:
         !If [UseCustomBucketName, !Ref BucketName, !Ref "AWS::NoValue"]
@@ -255,6 +264,7 @@ Resources:
 
   Ec2SecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Condition: CreateAppResources
     Properties:
       GroupDescription: Security group for the Django EC2 instance
       VpcId: !Ref VpcId
@@ -273,6 +283,7 @@ Resources:
 
   DbSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Condition: CreateAppResources
     Properties:
       GroupDescription: Security group for the PostgreSQL database
       VpcId: !Ref VpcId
@@ -291,6 +302,7 @@ Resources:
 
   DbSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
+    Condition: CreateAppResources
     Properties:
       DBSubnetGroupDescription: Subnets for the PostgreSQL database
       SubnetIds: !Ref DbSubnetIds
@@ -304,6 +316,7 @@ Resources:
 
   DbMasterSecret:
     Type: AWS::SecretsManager::Secret
+    Condition: CreateAppResources
     Properties:
       Description: !Sub "Master credentials for ${EnvironmentName} PostgreSQL"
       GenerateSecretString:
@@ -318,6 +331,7 @@ Resources:
 
   DatabaseInstance:
     Type: AWS::RDS::DBInstance
+    Condition: CreateAppResources
     DeletionPolicy: Snapshot
     UpdateReplacePolicy: Snapshot
     Properties:
@@ -348,6 +362,7 @@ Resources:
 
   Ec2Instance:
     Type: AWS::EC2::Instance
+    Condition: CreateAppResources
     Properties:
       InstanceType: !Ref Ec2InstanceType
       SubnetId: !Ref Ec2SubnetId
@@ -370,21 +385,27 @@ Resources:
 
 Outputs:
   BucketName:
+    Condition: CreateAppResources
     Description: Deployed S3 bucket name
     Value: !Ref AppBucket
   Ec2InstanceId:
+    Condition: CreateAppResources
     Description: EC2 instance ID
     Value: !Ref Ec2Instance
   Ec2PublicIp:
+    Condition: CreateAppResources
     Description: EC2 public IP address
     Value: !GetAtt Ec2Instance.PublicIp
   DatabaseEndpoint:
+    Condition: CreateAppResources
     Description: PostgreSQL endpoint
     Value: !GetAtt DatabaseInstance.Endpoint.Address
   DatabasePort:
+    Condition: CreateAppResources
     Description: PostgreSQL port
     Value: !GetAtt DatabaseInstance.Endpoint.Port
   DatabaseSecretArn:
+    Condition: CreateAppResources
     Description: Secrets Manager ARN containing the PostgreSQL credentials
     Value: !Ref DbMasterSecret
   GitHubActionsDeployRoleArn:

@@ -5,6 +5,7 @@ REGION="${AWS_REGION}"
 STACK_NAME="${CF_STACK_NAME:-welcome-to-the-django-prod}"
 BUCKET_NAME="${CF_BUCKET_NAME}"
 DEPLOY_ROLE_ARN="${CF_DEPLOY_ROLE_ARN:-}"
+BOOTSTRAP_ONLY="${CF_BOOTSTRAP_ONLY:-false}"
 PARAM_FILE="infra/parameters/prod.json"
 
 mapfile -t PARAM_OVERRIDES < <(
@@ -20,6 +21,14 @@ if [[ -n "${BUCKET_NAME}" ]]; then
   done
   PARAM_OVERRIDES=("${FILTERED[@]}" "BucketName=${BUCKET_NAME}")
 fi
+
+FILTERED=()
+for p in "${PARAM_OVERRIDES[@]}"; do
+  if [[ "${p}" != BootstrapOnly=* ]]; then
+    FILTERED+=("${p}")
+  fi
+done
+PARAM_OVERRIDES=("${FILTERED[@]}" "BootstrapOnly=${BOOTSTRAP_ONLY}")
 
 set +e
 DEPLOY_ARGS=(
