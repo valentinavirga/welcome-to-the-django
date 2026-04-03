@@ -14,14 +14,17 @@ Parameters:
     Default: ""
     Description: Optional S3 bucket name. Leave empty to auto-generate.
   VpcId:
-    Type: AWS::EC2::VPC::Id
-    Description: VPC where EC2 and RDS will be deployed.
+    Type: String
+    Default: ""
+    Description: VPC where EC2 and RDS will be deployed (required when BootstrapOnly=false).
   Ec2SubnetId:
-    Type: AWS::EC2::Subnet::Id
-    Description: Public subnet for the EC2 instance.
+    Type: String
+    Default: ""
+    Description: Public subnet for the EC2 instance (required when BootstrapOnly=false).
   DbSubnetIds:
-    Type: List<AWS::EC2::Subnet::Id>
-    Description: At least two private subnets for the PostgreSQL instance.
+    Type: String
+    Default: ""
+    Description: Private subnet IDs for PostgreSQL, comma-separated (required when BootstrapOnly=false and CreateDatabase=true).
   KeyPairName:
     Type: String
     Default: ""
@@ -92,6 +95,27 @@ Conditions:
   CreateDatabaseResources: !And
     - !Condition CreateAppResources
     - !Equals [!Ref CreateDatabase, "true"]
+
+Rules:
+  RequireVpcWhenAppResources:
+    Assertions:
+      - Assert: !Or
+          - !Equals [!Ref BootstrapOnly, "true"]
+          - !Not [!Equals [!Ref VpcId, ""]]
+        AssertDescription: VpcId is required when BootstrapOnly=false.
+  RequireEc2SubnetWhenAppResources:
+    Assertions:
+      - Assert: !Or
+          - !Equals [!Ref BootstrapOnly, "true"]
+          - !Not [!Equals [!Ref Ec2SubnetId, ""]]
+        AssertDescription: Ec2SubnetId is required when BootstrapOnly=false.
+  RequireDbSubnetsWhenDatabase:
+    Assertions:
+      - Assert: !Or
+          - !Equals [!Ref BootstrapOnly, "true"]
+          - !Equals [!Ref CreateDatabase, "false"]
+          - !Not [!Equals [!Ref DbSubnetIds, ""]]
+        AssertDescription: DbSubnetIds is required when BootstrapOnly=false and CreateDatabase=true.
 
 Resources:
   GitHubActionsDeployRole:
@@ -319,7 +343,7 @@ Resources:
     Condition: CreateDatabaseResources
     Properties:
       DBSubnetGroupDescription: Subnets for the PostgreSQL database
-      SubnetIds: !Ref DbSubnetIds
+      SubnetIds: !Split [",", !Ref DbSubnetIds]
       Tags:
         - Key: Name
           Value: !Sub "${EnvironmentName}-django-db-subnets"
