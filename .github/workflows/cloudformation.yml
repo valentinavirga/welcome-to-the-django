@@ -21,14 +21,20 @@ jobs:
       CF_BUCKET_NAME: ${{ secrets.CF_BUCKET_NAME }}
       CF_DEPLOY_ROLE_ARN: ${{ secrets.CF_DEPLOY_ROLE_ARN }}
       FIRST_BOOTSTRAP_RUN: ${{ secrets.CF_DEPLOY_ROLE_ARN == '' && 'true' || 'false' }}
+      RESOLVED_AWS_ROLE_TO_ASSUME: ${{ contains(secrets.AWS_ROLE_TO_ASSUME, 'arn:aws:iam::') && secrets.AWS_ROLE_TO_ASSUME || format('arn:aws:iam::{0}:role/{1}', secrets.AWS_ACCOUNT_ID, secrets.AWS_ROLE_TO_ASSUME) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Debug OIDC role resolution
+        run: |
+          echo "FIRST_BOOTSTRAP_RUN=${FIRST_BOOTSTRAP_RUN}"
+          echo "ROLE_TO_ASSUME=${RESOLVED_AWS_ROLE_TO_ASSUME}"
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ contains(secrets.AWS_ROLE_TO_ASSUME, 'arn:aws:iam::') && secrets.AWS_ROLE_TO_ASSUME || format('arn:aws:iam::{0}:role/{1}', secrets.AWS_ACCOUNT_ID, secrets.AWS_ROLE_TO_ASSUME) }}
+          role-to-assume: ${{ env.RESOLVED_AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Bootstrap IAM roles (first run)
