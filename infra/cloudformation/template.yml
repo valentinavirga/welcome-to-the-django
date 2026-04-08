@@ -264,6 +264,16 @@ Resources:
                   - rds:RemoveTagsFromResource
                   - rds:ListTagsForResource
                   - iam:GetRole
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:PutRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:UpdateAssumeRolePolicy
+                  - iam:PassRole
                   - secretsmanager:CreateSecret
                   - secretsmanager:DeleteSecret
                   - secretsmanager:DescribeSecret
@@ -399,53 +409,53 @@ Resources:
   #         Value: !Ref EnvironmentName
 
   # Ec2Instance:
-    Type: AWS::EC2::Instance
-    Condition: CreateAppResources
-    Properties:
-      InstanceType: !Ref Ec2InstanceType
-      SubnetId: !Ref Ec2SubnetId
-      SecurityGroupIds:
-        - !Ref Ec2SecurityGroup
-      KeyName: !If [UseKeyPair, !Ref KeyPairName, !Ref "AWS::NoValue"]
-      ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}"
-      Tags:
-        - Key: Name
-          Value: !Sub "${EnvironmentName}-django-ec2"
-        - Key: Project
-          Value: welcome-to-the-django
-        - Key: Environment
-          Value: !Ref EnvironmentName
-      UserData:
-        Fn::Base64: !Sub |
-          #!/bin/bash
-          dnf update -y
-          dnf install -y postgresql16
+  #   Type: AWS::EC2::Instance
+  #   Condition: CreateAppResources
+  #   Properties:
+  #     InstanceType: !Ref Ec2InstanceType
+  #     SubnetId: !Ref Ec2SubnetId
+  #     SecurityGroupIds:
+  #       - !Ref Ec2SecurityGroup
+  #     KeyName: !If [UseKeyPair, !Ref KeyPairName, !Ref "AWS::NoValue"]
+  #     ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}"
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub "${EnvironmentName}-django-ec2"
+  #       - Key: Project
+  #         Value: welcome-to-the-django
+  #       - Key: Environment
+  #         Value: !Ref EnvironmentName
+  #     UserData:
+  #       Fn::Base64: !Sub |
+  #         #!/bin/bash
+  #         dnf update -y
+  #         dnf install -y postgresql16
 
 Outputs:
   BucketName:
     Condition: CreateAppResources
     Description: Deployed S3 bucket name
     Value: !Ref AppBucket
-  Ec2InstanceId:
-    Condition: CreateAppResources
-    Description: EC2 instance ID
-    Value: !Ref Ec2Instance
-  Ec2PublicIp:
-    Condition: CreateAppResources
-    Description: EC2 public IP address
-    Value: !GetAtt Ec2Instance.PublicIp
-  DatabaseEndpoint:
-    Condition: CreateDatabaseResources
-    Description: PostgreSQL endpoint
-    Value: !GetAtt DatabaseInstance.Endpoint.Address
-  DatabasePort:
-    Condition: CreateDatabaseResources
-    Description: PostgreSQL port
-    Value: !GetAtt DatabaseInstance.Endpoint.Port
-  DatabaseSecretArn:
-    Condition: CreateDatabaseResources
-    Description: Secrets Manager ARN containing the PostgreSQL credentials
-    Value: !Ref DbMasterSecret
+  # Ec2InstanceId:
+  #   Condition: CreateAppResources
+  #   Description: EC2 instance ID
+  #   Value: !Ref Ec2Instance
+  # Ec2PublicIp:
+  #   Condition: CreateAppResources
+  #   Description: EC2 public IP address
+  #   Value: !GetAtt Ec2Instance.PublicIp
+  # DatabaseEndpoint:
+  #   Condition: CreateDatabaseResources
+  #   Description: PostgreSQL endpoint
+  #   Value: !GetAtt DatabaseInstance.Endpoint.Address
+  # DatabasePort:
+  #   Condition: CreateDatabaseResources
+  #   Description: PostgreSQL port
+  #   Value: !GetAtt DatabaseInstance.Endpoint.Port
+  # DatabaseSecretArn:
+  #   Condition: CreateDatabaseResources
+  #   Description: Secrets Manager ARN containing the PostgreSQL credentials
+  #   Value: !Ref DbMasterSecret
   GitHubActionsDeployRoleArn:
     Description: IAM role ARN to use in GitHub OIDC (AWS_ROLE_TO_ASSUME)
     Value: !GetAtt GitHubActionsDeployRole.Arn
