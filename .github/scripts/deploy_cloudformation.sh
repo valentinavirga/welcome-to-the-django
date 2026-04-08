@@ -43,10 +43,11 @@ DEPLOY_EXIT=$?
 set -e
 
 if [[ ${DEPLOY_EXIT} -ne 0 ]]; then
-  echo "Deploy failed. Latest CloudFormation events:"
+  echo "Deploy failed. FAILED events only:"
   aws cloudformation describe-stack-events \
     --region "${REGION}" \
     --stack-name "${STACK_NAME}" \
-    --max-items 40 || true
+    --query "StackEvents[?contains(ResourceStatus,'FAILED')].[LogicalResourceId,ResourceStatus,ResourceStatusReason]" \
+    --output table || true
   exit ${DEPLOY_EXIT}
 fi
