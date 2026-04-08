@@ -5,6 +5,7 @@
     "Ec2SubnetId": "subnet-05cc66a26d9010d57",
     "Ec2SecurityGroupId": "sg-0385ece0cc87f4c27",
     "KeyPairName": "",
-    "Ec2InstanceType": "t3.micro"
+    "Ec2InstanceType": "t3.micro",
+    "AmiId": "ami-0fd6ebf15115f8904"
   }
 }

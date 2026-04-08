@@ -44,10 +44,19 @@ set -e
 
 if [[ ${DEPLOY_EXIT} -ne 0 ]]; then
   echo "Deploy failed. FAILED events only:"
-  aws cloudformation describe-stack-events \
+  STACK_EXISTS="$(aws cloudformation describe-stacks \
     --region "${REGION}" \
     --stack-name "${STACK_NAME}" \
-    --query "StackEvents[?contains(ResourceStatus,'FAILED')].[LogicalResourceId,ResourceStatus,ResourceStatusReason]" \
-    --output table || true
+    --query 'Stacks[0].StackName' \
+    --output text 2>/dev/null || true)"
+  if [[ -n "${STACK_EXISTS}" && "${STACK_EXISTS}" != "None" ]]; then
+    aws cloudformation describe-stack-events \
+      --region "${REGION}" \
+      --stack-name "${STACK_NAME}" \
+      --query "StackEvents[?contains(ResourceStatus,'FAILED')].[LogicalResourceId,ResourceStatus,ResourceStatusReason]" \
+      --output table || true
+  else
+    echo "Stack not found yet; no events available."
+  fi
   exit ${DEPLOY_EXIT}
 fi
