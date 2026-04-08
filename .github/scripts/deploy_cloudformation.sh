@@ -26,6 +26,18 @@ mapfile -t PARAM_OVERRIDES < <(
   jq -r '.Parameters | to_entries[] | "\(.key)=\(.value|tostring)"' "${PARAM_FILE}"
 )
 
+AMI_ID="$(aws ec2 describe-images \
+  --region "${REGION}" \
+  --owners amazon \
+  --filters \
+    'Name=name,Values=al2023-ami-kernel-default-x86_64-*' \
+    'Name=architecture,Values=x86_64' \
+    'Name=state,Values=available' \
+  --query 'sort_by(Images, &CreationDate)[-1].ImageId' \
+  --output text)"
+echo "Resolved AMI: ${AMI_ID}"
+PARAM_OVERRIDES+=("AmiId=${AMI_ID}")
+
 set +e
 DEPLOY_ARGS=(
   --region "${REGION}"
