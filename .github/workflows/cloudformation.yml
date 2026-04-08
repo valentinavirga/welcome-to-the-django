@@ -40,6 +40,21 @@ jobs:
       - name: Who am I
         run: aws sts get-caller-identity
 
+      - name: Verify account match (unmasked)
+        run: |
+          set -euo pipefail
+          CALLER_ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
+          ROLE_ACCOUNT="$(echo "${RESOLVED_AWS_ROLE_TO_ASSUME}" | cut -d: -f5)"
+          echo "CALLER_LAST4=${CALLER_ACCOUNT:8:4}"
+          echo "ROLE_LAST4=${ROLE_ACCOUNT:8:4}"
+          if [[ "${CALLER_ACCOUNT}" == "${ROLE_ACCOUNT}" ]]; then
+            echo "ACCOUNT_MATCH=true"
+          else
+            echo "ACCOUNT_MATCH=false"
+            echo "Error: caller account and role account do not match"
+            exit 1
+          fi
+
       - name: Bootstrap IAM roles (first run)
         if: env.FIRST_BOOTSTRAP_RUN == 'true'
         env:
