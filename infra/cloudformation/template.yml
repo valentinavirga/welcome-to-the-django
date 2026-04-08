@@ -15,14 +15,13 @@ Parameters:
   Ec2SubnetId:
     Type: String
     Description: Public subnet for the EC2 instance.
+  Ec2SecurityGroupId:
+    Type: String
+    Description: Existing security group ID to attach to EC2.
   KeyPairName:
     Type: String
     Default: ""
     Description: Optional EC2 key pair for SSH access.
-  SshCidr:
-    Type: String
-    Default: 0.0.0.0/0
-    Description: CIDR block allowed to connect to EC2 via SSH.
   Ec2InstanceType:
     Type: String
     Default: t3.micro
@@ -40,31 +39,13 @@ Conditions:
   UseKeyPair: !Not [!Equals [!Ref KeyPairName, ""]]
 
 Resources:
-  Ec2SecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Security group for the Django EC2 instance
-      VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: !Ref SshCidr
-      Tags:
-        - Key: Name
-          Value: !Sub "${EnvironmentName}-django-ec2-sg"
-        - Key: Project
-          Value: welcome-to-the-django
-        - Key: Environment
-          Value: !Ref EnvironmentName
-
   Ec2Instance:
     Type: AWS::EC2::Instance
     Properties:
       InstanceType: !Ref Ec2InstanceType
       SubnetId: !Ref Ec2SubnetId
       SecurityGroupIds:
-        - !Ref Ec2SecurityGroup
+        - !Ref Ec2SecurityGroupId
       KeyName: !If [UseKeyPair, !Ref KeyPairName, !Ref "AWS::NoValue"]
       ImageId: !Ref AmiId
       Tags:
@@ -84,4 +65,4 @@ Outputs:
     Value: !GetAtt Ec2Instance.PublicIp
   Ec2SecurityGroupId:
     Description: EC2 security group ID
-    Value: !Ref Ec2SecurityGroup
+    Value: !Ref Ec2SecurityGroupId

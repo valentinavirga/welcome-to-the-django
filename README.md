@@ -32,8 +32,8 @@ Per creare solo `EC2`, aggiorna i file in `infra/parameters/*.json` con valori r
 
 - `VpcId`
 - `Ec2SubnetId` (subnet pubblica per la VM)
+- `Ec2SecurityGroupId` (security group esistente, con almeno SSH/22 dal tuo IP)
 - `KeyPairName` (opzionale, per accesso SSH)
-- `SshCidr` (meglio restringerlo al proprio IP)
 
 Il template ora crea:
 

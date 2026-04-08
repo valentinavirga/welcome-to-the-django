@@ -1,10 +1,10 @@
 {
   "Parameters": {
     "EnvironmentName": "prod",
-    "VpcId": "vpc-0f7b38b9f92d038ea",
-    "Ec2SubnetId": "subnet-03462b56024918852",
+    "VpcId": "vpc-0bd1174dcd330d460",
+    "Ec2SubnetId": "subnet-05cc66a26d9010d57",
+    "Ec2SecurityGroupId": "sg-0385ece0cc87f4c27",
     "KeyPairName": "",
-    "SshCidr": "79.40.24.237/32",
     "Ec2InstanceType": "t3.micro",
     "AmiId": "ami-0fd6ebf15115f8904"
   }
