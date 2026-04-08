@@ -18,18 +18,11 @@ jobs:
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
       CF_STACK_NAME: ${{ secrets.CF_STACK_NAME != '' && secrets.CF_STACK_NAME || 'welcome-to-the-django-prod' }}
-      CF_BUCKET_NAME: ${{ secrets.CF_BUCKET_NAME }}
       CF_DEPLOY_ROLE_ARN: ${{ secrets.CF_DEPLOY_ROLE_ARN }}
-      FIRST_BOOTSTRAP_RUN: ${{ secrets.CF_DEPLOY_ROLE_ARN == '' && 'true' || 'false' }}
       RESOLVED_AWS_ROLE_TO_ASSUME: ${{ contains(secrets.AWS_ROLE_TO_ASSUME, 'arn:aws:iam::') && secrets.AWS_ROLE_TO_ASSUME || format('arn:aws:iam::{0}:role/{1}', secrets.AWS_ACCOUNT_ID, secrets.AWS_ROLE_TO_ASSUME) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Debug OIDC role resolution
-        run: |
-          echo "FIRST_BOOTSTRAP_RUN=${FIRST_BOOTSTRAP_RUN} --"
-          echo "ROLE_TO_ASSUME=${RESOLVED_AWS_ROLE_TO_ASSUME}"
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
@@ -37,49 +30,6 @@ jobs:
           role-to-assume: ${{ env.RESOLVED_AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Who am I
-        run: aws sts get-caller-identity
-
-      - name: Verify account match (unmasked)
-        run: |
-          set -euo pipefail
-          CALLER_ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
-          ROLE_ACCOUNT="$(echo "${RESOLVED_AWS_ROLE_TO_ASSUME}" | cut -d: -f5)"
-          echo "CALLER_LAST4=${CALLER_ACCOUNT:8:4}"
-          echo "ROLE_LAST4=${ROLE_ACCOUNT:8:4}"
-          if [[ "${CALLER_ACCOUNT}" == "${ROLE_ACCOUNT}" ]]; then
-            echo "ACCOUNT_MATCH=true"
-          else
-            echo "ACCOUNT_MATCH=false"
-            echo "Error: caller account and role account do not match"
-            exit 1
-          fi
-
-      - name: Bootstrap IAM roles (first run)
-        if: env.FIRST_BOOTSTRAP_RUN == 'true'
-        env:
-          CF_BOOTSTRAP_ONLY: "true"
-        run: bash .github/scripts/deploy_cloudformation.sh
-
-      - name: Resolve execution role ARN from stack outputs
-        if: env.FIRST_BOOTSTRAP_RUN == 'true'
-        run: |
-          set -euo pipefail
-          STACK_NAME="${CF_STACK_NAME:-welcome-to-the-django-prod}"
-          ROLE_ARN="$(aws cloudformation describe-stacks \
-            --region "${AWS_REGION}" \
-            --stack-name "${STACK_NAME}" \
-            --query "Stacks[0].Outputs[?OutputKey=='CloudFormationExecutionRoleArn'].OutputValue" \
-            --output text)"
-          if [[ -z "${ROLE_ARN}" || "${ROLE_ARN}" == "None" ]]; then
-            echo "Unable to resolve CloudFormationExecutionRoleArn from stack outputs."
-            exit 1
-          fi
-          echo "CF_DEPLOY_ROLE_ARN=${ROLE_ARN}" >> "${GITHUB_ENV}"
-
       - name: Deploy stack
-        if: env.FIRST_BOOTSTRAP_RUN != 'true'
         timeout-minutes: 60
-        env:
-          CF_BOOTSTRAP_ONLY: "false"
         run: bash .github/scripts/deploy_cloudformation.sh

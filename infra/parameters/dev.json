@@ -1,16 +1,10 @@
 {
   "Parameters": {
     "EnvironmentName": "dev",
-    "BucketName": "",
     "VpcId": "vpc-0f7b38b9f92d038ea",
     "Ec2SubnetId": "subnet-03462b56024918852",
-    "DbSubnetIds": "subnet-0e784fcce5c1ff7d6,subnet-09962095686ce3994",
     "KeyPairName": "",
     "SshCidr": "79.40.24.237/32",
-    "Ec2InstanceType": "t3.micro",
-    "DbInstanceClass": "db.t4g.micro",
-    "CreateDatabase": "true",
-    "DbName": "appdb",
-    "DbMasterUsername": "postgres"
+    "Ec2InstanceType": "t3.micro"
   }
 }
