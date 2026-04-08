@@ -32,7 +32,6 @@ DEPLOY_ARGS=(
   --template-file "infra/cloudformation/template.yml"
   --stack-name "${STACK_NAME}"
   --parameter-overrides "${PARAM_OVERRIDES[@]}"
-  --capabilities CAPABILITY_NAMED_IAM
 )
 
 if [[ -n "${DEPLOY_ROLE_ARN}" ]]; then
