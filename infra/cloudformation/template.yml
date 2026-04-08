@@ -32,6 +32,10 @@ Parameters:
       - t3.small
       - t3.medium
     Description: EC2 instance size.
+  AmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+    Description: AMI ID resolved from SSM (Amazon Linux 2023).
 
 Conditions:
   UseKeyPair: !Not [!Equals [!Ref KeyPairName, ""]]
@@ -63,7 +67,7 @@ Resources:
       SecurityGroupIds:
         - !Ref Ec2SecurityGroup
       KeyName: !If [UseKeyPair, !Ref KeyPairName, !Ref "AWS::NoValue"]
-      ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}"
+      ImageId: !Ref AmiId
       Tags:
         - Key: Name
           Value: !Sub "${EnvironmentName}-django-ec2"

@@ -30,6 +30,14 @@ jobs:
           role-to-assume: ${{ env.RESOLVED_AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Validate template is EC2-only
+        run: |
+          set -euo pipefail
+          if grep -Eq 'GitHubActionsDeployRole|CloudFormationExecutionRole|AWS::RDS::|AWS::S3::Bucket|BootstrapOnly|CreateDatabase' infra/cloudformation/template.yml; then
+            echo "Template still contains legacy resources/parameters."
+            exit 1
+          fi
+
       - name: Deploy stack
         timeout-minutes: 60
         run: bash .github/scripts/deploy_cloudformation.sh
