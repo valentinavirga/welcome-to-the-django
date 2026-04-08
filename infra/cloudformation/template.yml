@@ -180,7 +180,6 @@ Resources:
                   - rds:AddTagsToResource
                   - rds:RemoveTagsFromResource
                   - rds:ListTagsForResource
-                  - iam:GetRole
                 Resource: "*"
               - Sid: AllowSecretsManagerActions
                 Effect: Allow
@@ -263,17 +262,6 @@ Resources:
                   - rds:AddTagsToResource
                   - rds:RemoveTagsFromResource
                   - rds:ListTagsForResource
-                  - iam:GetRole
-                  - iam:CreateRole
-                  - iam:DeleteRole
-                  - iam:PutRolePolicy
-                  - iam:DeleteRolePolicy
-                  - iam:AttachRolePolicy
-                  - iam:DetachRolePolicy
-                  - iam:TagRole
-                  - iam:UntagRole
-                  - iam:UpdateAssumeRolePolicy
-                  - iam:PassRole
                   - secretsmanager:CreateSecret
                   - secretsmanager:DeleteSecret
                   - secretsmanager:DescribeSecret
