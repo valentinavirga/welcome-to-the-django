@@ -37,6 +37,9 @@ jobs:
           role-to-assume: ${{ env.RESOLVED_AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Who am I
+        run: aws sts get-caller-identity
+
       - name: Bootstrap IAM roles (first run)
         if: env.FIRST_BOOTSTRAP_RUN == 'true'
         env:
