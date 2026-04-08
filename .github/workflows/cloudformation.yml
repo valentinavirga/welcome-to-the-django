@@ -28,7 +28,7 @@ jobs:
 
       - name: Debug OIDC role resolution
         run: |
-          echo "FIRST_BOOTSTRAP_RUN=${FIRST_BOOTSTRAP_RUN}"
+          echo "FIRST_BOOTSTRAP_RUN=${FIRST_BOOTSTRAP_RUN} --"
           echo "ROLE_TO_ASSUME=${RESOLVED_AWS_ROLE_TO_ASSUME}"
 
       - name: Configure AWS credentials (OIDC)
