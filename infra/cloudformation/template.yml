@@ -300,105 +300,105 @@ Resources:
         - Key: Environment
           Value: !Ref EnvironmentName
 
-  Ec2SecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Condition: CreateAppResources
-    Properties:
-      GroupDescription: Security group for the Django EC2 instance
-      VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 22
-          ToPort: 22
-          CidrIp: !Ref SshCidr
-      Tags:
-        - Key: Name
-          Value: !Sub "${EnvironmentName}-django-ec2-sg"
-        - Key: Project
-          Value: welcome-to-the-django
-        - Key: Environment
-          Value: !Ref EnvironmentName
+  # Ec2SecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   Condition: CreateAppResources
+  #   Properties:
+  #     GroupDescription: Security group for the Django EC2 instance
+  #     VpcId: !Ref VpcId
+  #     SecurityGroupIngress:
+  #       - IpProtocol: tcp
+  #         FromPort: 22
+  #         ToPort: 22
+  #         CidrIp: !Ref SshCidr
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub "${EnvironmentName}-django-ec2-sg"
+  #       - Key: Project
+  #         Value: welcome-to-the-django
+  #       - Key: Environment
+  #         Value: !Ref EnvironmentName
 
-  DbSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Condition: CreateDatabaseResources
-    Properties:
-      GroupDescription: Security group for the PostgreSQL database
-      VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 5432
-          ToPort: 5432
-          SourceSecurityGroupId: !Ref Ec2SecurityGroup
-      Tags:
-        - Key: Name
-          Value: !Sub "${EnvironmentName}-django-db-sg"
-        - Key: Project
-          Value: welcome-to-the-django
-        - Key: Environment
-          Value: !Ref EnvironmentName
+  # DbSecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   Condition: CreateDatabaseResources
+  #   Properties:
+  #     GroupDescription: Security group for the PostgreSQL database
+  #     VpcId: !Ref VpcId
+  #     SecurityGroupIngress:
+  #       - IpProtocol: tcp
+  #         FromPort: 5432
+  #         ToPort: 5432
+  #         SourceSecurityGroupId: !Ref Ec2SecurityGroup
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub "${EnvironmentName}-django-db-sg"
+  #       - Key: Project
+  #         Value: welcome-to-the-django
+  #       - Key: Environment
+  #         Value: !Ref EnvironmentName
 
-  DbSubnetGroup:
-    Type: AWS::RDS::DBSubnetGroup
-    Condition: CreateDatabaseResources
-    Properties:
-      DBSubnetGroupDescription: Subnets for the PostgreSQL database
-      SubnetIds: !Split [",", !Ref DbSubnetIds]
-      Tags:
-        - Key: Name
-          Value: !Sub "${EnvironmentName}-django-db-subnets"
-        - Key: Project
-          Value: welcome-to-the-django
-        - Key: Environment
-          Value: !Ref EnvironmentName
+  # DbSubnetGroup:
+  #   Type: AWS::RDS::DBSubnetGroup
+  #   Condition: CreateDatabaseResources
+  #   Properties:
+  #     DBSubnetGroupDescription: Subnets for the PostgreSQL database
+  #     SubnetIds: !Split [",", !Ref DbSubnetIds]
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub "${EnvironmentName}-django-db-subnets"
+  #       - Key: Project
+  #         Value: welcome-to-the-django
+  #       - Key: Environment
+  #         Value: !Ref EnvironmentName
 
-  DbMasterSecret:
-    Type: AWS::SecretsManager::Secret
-    Condition: CreateDatabaseResources
-    Properties:
-      Description: !Sub "Master credentials for ${EnvironmentName} PostgreSQL"
-      GenerateSecretString:
-        SecretStringTemplate: !Sub '{"username":"${DbMasterUsername}"}'
-        GenerateStringKey: password
-        ExcludeCharacters: '"@/\\'
-      Tags:
-        - Key: Project
-          Value: welcome-to-the-django
-        - Key: Environment
-          Value: !Ref EnvironmentName
+  # DbMasterSecret:
+  #   Type: AWS::SecretsManager::Secret
+  #   Condition: CreateDatabaseResources
+  #   Properties:
+  #     Description: !Sub "Master credentials for ${EnvironmentName} PostgreSQL"
+  #     GenerateSecretString:
+  #       SecretStringTemplate: !Sub '{"username":"${DbMasterUsername}"}'
+  #       GenerateStringKey: password
+  #       ExcludeCharacters: '"@/\\'
+  #     Tags:
+  #       - Key: Project
+  #         Value: welcome-to-the-django
+  #       - Key: Environment
+  #         Value: !Ref EnvironmentName
 
-  DatabaseInstance:
-    Type: AWS::RDS::DBInstance
-    Condition: CreateDatabaseResources
-    DeletionPolicy: Snapshot
-    UpdateReplacePolicy: Snapshot
-    Properties:
-      DBInstanceIdentifier: !Sub "${EnvironmentName}-django-postgres"
-      AllocatedStorage: 20
-      MaxAllocatedStorage: 100
-      DBInstanceClass: !Ref DbInstanceClass
-      Engine: postgres
-      EngineVersion: "16.3"
-      DBName: !Ref DbName
-      MasterUsername: !Sub "{{resolve:secretsmanager:${DbMasterSecret}:SecretString:username}}"
-      MasterUserPassword: !Sub "{{resolve:secretsmanager:${DbMasterSecret}:SecretString:password}}"
-      DBSubnetGroupName: !Ref DbSubnetGroup
-      VPCSecurityGroups:
-        - !Ref DbSecurityGroup
-      PubliclyAccessible: false
-      MultiAZ: false
-      StorageEncrypted: true
-      BackupRetentionPeriod: 1
-      DeletionProtection: false
-      Tags:
-        - Key: Name
-          Value: !Sub "${EnvironmentName}-django-postgres"
-        - Key: Project
-          Value: welcome-to-the-django
-        - Key: Environment
-          Value: !Ref EnvironmentName
+  # DatabaseInstance:
+  #   Type: AWS::RDS::DBInstance
+  #   Condition: CreateDatabaseResources
+  #   DeletionPolicy: Snapshot
+  #   UpdateReplacePolicy: Snapshot
+  #   Properties:
+  #     DBInstanceIdentifier: !Sub "${EnvironmentName}-django-postgres"
+  #     AllocatedStorage: 20
+  #     MaxAllocatedStorage: 100
+  #     DBInstanceClass: !Ref DbInstanceClass
+  #     Engine: postgres
+  #     EngineVersion: "16.3"
+  #     DBName: !Ref DbName
+  #     MasterUsername: !Sub "{{resolve:secretsmanager:${DbMasterSecret}:SecretString:username}}"
+  #     MasterUserPassword: !Sub "{{resolve:secretsmanager:${DbMasterSecret}:SecretString:password}}"
+  #     DBSubnetGroupName: !Ref DbSubnetGroup
+  #     VPCSecurityGroups:
+  #       - !Ref DbSecurityGroup
+  #     PubliclyAccessible: false
+  #     MultiAZ: false
+  #     StorageEncrypted: true
+  #     BackupRetentionPeriod: 1
+  #     DeletionProtection: false
+  #     Tags:
+  #       - Key: Name
+  #         Value: !Sub "${EnvironmentName}-django-postgres"
+  #       - Key: Project
+  #         Value: welcome-to-the-django
+  #       - Key: Environment
+  #         Value: !Ref EnvironmentName
 
-  Ec2Instance:
+  # Ec2Instance:
     Type: AWS::EC2::Instance
     Condition: CreateAppResources
     Properties:
