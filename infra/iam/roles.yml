@@ -1,0 +1,124 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Welcome to the Django - IAM roles for GitHub Actions OIDC and CloudFormation execution
+
+Parameters:
+  GitHubOrg:
+    Type: String
+    Description: GitHub organisation or user name (e.g. my-org).
+  GitHubRepo:
+    Type: String
+    Description: GitHub repository name (e.g. welcome-to-the-django).
+  GitHubBranch:
+    Type: String
+    Default: main
+    Description: Branch allowed to assume the deploy role.
+  ExistingGitHubOidcProviderArn:
+    Type: String
+    Default: ""
+    Description: Optional existing GitHub OIDC provider ARN to reuse instead of creating a new one.
+
+Conditions:
+  CreateGitHubOidcProvider: !Equals [!Ref ExistingGitHubOidcProviderArn, ""]
+
+Resources:
+  # ── OIDC provider (one per account) ─────────────────────────────────────────
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Condition: CreateGitHubOidcProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea1
+
+  # ── Role assumed by GitHub Actions via OIDC ──────────────────────────────────
+  GitHubActionsDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: welcome-to-the-django-github-actions
+      Description: Assumed by GitHub Actions to deploy CloudFormation stacks.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !If
+                - CreateGitHubOidcProvider
+                - !Ref GitHubOidcProvider
+                - !Ref ExistingGitHubOidcProviderArn
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubOrg}/${GitHubRepo}:ref:refs/heads/${GitHubBranch}"
+      Policies:
+        - PolicyName: PassRoleToCloudFormation
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: !GetAtt CloudFormationExecutionRole.Arn
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCloudFormationFullAccess
+      Tags:
+        - Key: Project
+          Value: welcome-to-the-django
+        - Key: ManagedBy
+          Value: cloudformation
+
+  # ── Role assumed by CloudFormation to create / update resources ───────────────
+  CloudFormationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: welcome-to-the-django-cfn-execution
+      Description: Used by CloudFormation to provision application resources.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: Ec2Provisioning
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:Describe*
+                  - ec2:RunInstances
+                  - ec2:TerminateInstances
+                  - ec2:StopInstances
+                  - ec2:StartInstances
+                  - ec2:CreateTags
+                  - ec2:DeleteTags
+                Resource: "*"
+      Tags:
+        - Key: Project
+          Value: welcome-to-the-django
+        - Key: ManagedBy
+          Value: cloudformation
+
+Outputs:
+  GitHubActionsDeployRoleArn:
+    Description: ARN of the GitHub Actions deploy role (use as AWS_ROLE_TO_ASSUME secret)
+    Value: !GetAtt GitHubActionsDeployRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-GitHubActionsDeployRoleArn"
+
+  CloudFormationExecutionRoleArn:
+    Description: ARN of the CloudFormation execution role (use as CF_DEPLOY_ROLE_ARN secret)
+    Value: !GetAtt CloudFormationExecutionRole.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-CloudFormationExecutionRoleArn"
+
+  GitHubOidcProviderArn:
+    Description: ARN of the GitHub OIDC provider
+    Value: !If
+      - CreateGitHubOidcProvider
+      - !Ref GitHubOidcProvider
+      - !Ref ExistingGitHubOidcProviderArn

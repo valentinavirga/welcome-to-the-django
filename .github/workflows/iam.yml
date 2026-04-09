@@ -1,0 +1,62 @@
+name: Deploy IAM Roles
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/iam/**"
+      - ".github/workflows/iam.yml"
+  workflow_dispatch: {} # allow manual bootstrap trigger
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-iam:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      IAM_STACK_NAME: ${{ secrets.IAM_STACK_NAME != '' && secrets.IAM_STACK_NAME || 'welcome-to-the-django-iam' }}
+      GITHUB_ORG: ${{ github.repository_owner }}
+      GITHUB_REPO: ${{ github.event.repository.name }}
+      GITHUB_BRANCH: main
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate AWS role configuration
+        env:
+          AWS_BOOTSTRAP_ROLE_ARN: ${{ secrets.AWS_BOOTSTRAP_ROLE_ARN }}
+          AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${AWS_REGION}" ]]; then
+            echo "Missing AWS_REGION secret."
+            exit 1
+          fi
+          ROLE_TO_ASSUME="${AWS_BOOTSTRAP_ROLE_ARN:-${AWS_ROLE_TO_ASSUME:-}}"
+          if [[ -z "${ROLE_TO_ASSUME}" ]]; then
+            echo "Set AWS_BOOTSTRAP_ROLE_ARN or AWS_ROLE_TO_ASSUME in GitHub Actions secrets."
+            exit 1
+          fi
+          if [[ "${ROLE_TO_ASSUME}" == arn:aws:iam::* ]]; then
+            echo "RESOLVED_AWS_ROLE_TO_ASSUME=${ROLE_TO_ASSUME}" >> "${GITHUB_ENV}"
+          else
+            if [[ -z "${AWS_ACCOUNT_ID}" ]]; then
+              echo "Missing AWS_ACCOUNT_ID secret while using a short role name."
+              exit 1
+            fi
+            echo "RESOLVED_AWS_ROLE_TO_ASSUME=arn:aws:iam::${AWS_ACCOUNT_ID}:role/${ROLE_TO_ASSUME}" >> "${GITHUB_ENV}"
+          fi
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.RESOLVED_AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy IAM roles stack
+        run: bash .github/scripts/deploy_iam.sh
