@@ -24,6 +24,26 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate deploy configuration
+        run: |
+          set -euo pipefail
+          if [[ -z "${AWS_REGION}" ]]; then
+            echo "Missing AWS_REGION secret."
+            exit 1
+          fi
+          if [[ -z "${CF_DEPLOY_ROLE_ARN}" ]]; then
+            echo "Missing CF_DEPLOY_ROLE_ARN secret."
+            exit 1
+          fi
+          if [[ ! "${CF_DEPLOY_ROLE_ARN}" =~ ^arn:aws:iam::[0-9]{12}:role/.+ ]]; then
+            echo "CF_DEPLOY_ROLE_ARN is not a valid IAM role ARN."
+            exit 1
+          fi
+          if [[ ! "${CF_STACK_NAME}" =~ ^[a-zA-Z][-a-zA-Z0-9]*$ ]]; then
+            echo "CF_STACK_NAME is invalid: ${CF_STACK_NAME}"
+            exit 1
+          fi
+
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
