@@ -31,11 +31,7 @@ jobs:
             echo "Missing AWS_REGION secret."
             exit 1
           fi
-          if [[ -z "${CF_DEPLOY_ROLE_ARN}" ]]; then
-            echo "Missing CF_DEPLOY_ROLE_ARN secret."
-            exit 1
-          fi
-          if [[ ! "${CF_DEPLOY_ROLE_ARN}" =~ ^arn:aws:iam::[0-9]{12}:role/.+ ]]; then
+          if [[ -n "${CF_DEPLOY_ROLE_ARN}" && ! "${CF_DEPLOY_ROLE_ARN}" =~ ^arn:aws:iam::[0-9]{12}:role/.+ ]]; then
             echo "CF_DEPLOY_ROLE_ARN is not a valid IAM role ARN."
             exit 1
           fi

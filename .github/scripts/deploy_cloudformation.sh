@@ -8,12 +8,7 @@ STACK_NAME="${CF_STACK_NAME:-welcome-to-the-django-prod}"
 DEPLOY_ROLE_ARN="${CF_DEPLOY_ROLE_ARN:-}"
 PARAM_FILE="infra/parameters/prod.json"
 
-if [[ -z "${DEPLOY_ROLE_ARN}" ]]; then
-  echo "CF_DEPLOY_ROLE_ARN is required. Set it in GitHub Actions secrets."
-  exit 1
-fi
-
-if [[ ! "${DEPLOY_ROLE_ARN}" =~ ^arn:aws:iam::[0-9]{12}:role/.+ ]]; then
+if [[ -n "${DEPLOY_ROLE_ARN}" && ! "${DEPLOY_ROLE_ARN}" =~ ^arn:aws:iam::[0-9]{12}:role/.+ ]]; then
   echo "CF_DEPLOY_ROLE_ARN is invalid: ${DEPLOY_ROLE_ARN}"
   exit 1
 fi
@@ -49,7 +44,9 @@ DEPLOY_ARGS=(
   --parameter-overrides "${PARAM_OVERRIDES[@]}"
 )
 
-DEPLOY_ARGS+=(--role-arn "${DEPLOY_ROLE_ARN}")
+if [[ -n "${DEPLOY_ROLE_ARN}" ]]; then
+  DEPLOY_ARGS+=(--role-arn "${DEPLOY_ROLE_ARN}")
+fi
 
 aws cloudformation deploy "${DEPLOY_ARGS[@]}" --no-cli-pager
 DEPLOY_EXIT=$?
