@@ -14,7 +14,22 @@ set -euo pipefail
 
 export AWS_PAGER=""
 
-REGION="${AWS_REGION}"
+REGION="${AWS_REGION:-$(aws configure get region)}"
+if [[ -z "${REGION}" ]]; then
+  echo "Missing AWS region. Set AWS_REGION or configure a default AWS CLI region."
+  exit 1
+fi
+
+if [[ -z "${GITHUB_ORG:-}" ]]; then
+  echo "Missing GITHUB_ORG. Export GITHUB_ORG before running this script locally."
+  exit 1
+fi
+
+if [[ -z "${GITHUB_REPO:-}" ]]; then
+  echo "Missing GITHUB_REPO. Export GITHUB_REPO before running this script locally."
+  exit 1
+fi
+
 STACK_NAME="${IAM_STACK_NAME:-welcome-to-the-django-iam}"
 GH_ORG="${GITHUB_ORG}"
 GH_REPO="${GITHUB_REPO}"
