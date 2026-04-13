@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Welcome to the Django - EC2 only infrastructure
+Description: Welcome to the Django - EC2 + PostgreSQL infrastructure
 
 Parameters:
   EnvironmentName:
@@ -34,9 +34,65 @@ Parameters:
   AmiId:
     Type: String
     Description: Amazon Linux 2023 AMI ID for the region (resolved at deploy time).
+  CreateDatabase:
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Whether to create a PostgreSQL RDS instance.
+  DbSubnetIdA:
+    Type: String
+    Default: ""
+    Description: First subnet ID for the RDS DB subnet group.
+  DbSubnetIdB:
+    Type: String
+    Default: ""
+    Description: Second subnet ID (different AZ) for the RDS DB subnet group.
+  DbInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+      - db.t3.medium
+    Description: RDS instance size.
+  DbAllocatedStorage:
+    Type: Number
+    Default: 20
+    MinValue: 20
+    MaxValue: 1000
+    Description: Allocated storage in GiB for PostgreSQL.
+  DbName:
+    Type: String
+    Default: djangodb
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+    Description: Initial PostgreSQL database name.
+  DbMasterUsername:
+    Type: String
+    Default: djangoadmin
+    MinLength: 1
+    MaxLength: 63
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9_]*$"
+    Description: Master username for PostgreSQL (password is managed by RDS/Secrets Manager).
+  DbPubliclyAccessible:
+    Type: String
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: Whether the RDS instance should be publicly accessible.
 
 Conditions:
   UseKeyPair: !Not [!Equals [!Ref KeyPairName, ""]]
+  CreateDatabaseCondition: !Equals [!Ref CreateDatabase, "true"]
+  HasDbSubnetA: !Not [!Equals [!Ref DbSubnetIdA, ""]]
+  HasDbSubnetB: !Not [!Equals [!Ref DbSubnetIdB, ""]]
+  CanCreateDatabase: !And
+    - !Condition CreateDatabaseCondition
+    - !Condition HasDbSubnetA
+    - !Condition HasDbSubnetB
+  DbPublicAccessEnabled: !Equals [!Ref DbPubliclyAccessible, "true"]
 
 Resources:
   Ec2Instance:
@@ -56,6 +112,71 @@ Resources:
         - Key: Environment
           Value: !Ref EnvironmentName
 
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: CanCreateDatabase
+    Properties:
+      GroupDescription: !Sub "${EnvironmentName} PostgreSQL access from EC2"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref Ec2SecurityGroupId
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-django-rds-sg"
+        - Key: Project
+          Value: welcome-to-the-django
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Condition: CanCreateDatabase
+    Properties:
+      DBSubnetGroupDescription: !Sub "${EnvironmentName} Django PostgreSQL subnet group"
+      SubnetIds:
+        - !Ref DbSubnetIdA
+        - !Ref DbSubnetIdB
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-django-rds-subnet-group"
+        - Key: Project
+          Value: welcome-to-the-django
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
+  PostgresDb:
+    Type: AWS::RDS::DBInstance
+    Condition: CanCreateDatabase
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: !Sub "${EnvironmentName}-django-postgres"
+      DBInstanceClass: !Ref DbInstanceClass
+      Engine: postgres
+      AllocatedStorage: !Ref DbAllocatedStorage
+      StorageType: gp3
+      DBName: !Ref DbName
+      MasterUsername: !Ref DbMasterUsername
+      ManageMasterUserPassword: true
+      PubliclyAccessible: !If [DbPublicAccessEnabled, true, false]
+      MultiAZ: false
+      BackupRetentionPeriod: 7
+      AutoMinorVersionUpgrade: true
+      DeletionProtection: false
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${EnvironmentName}-django-postgres"
+        - Key: Project
+          Value: welcome-to-the-django
+        - Key: Environment
+          Value: !Ref EnvironmentName
+
 Outputs:
   Ec2InstanceId:
     Description: EC2 instance ID
@@ -66,3 +187,15 @@ Outputs:
   Ec2SecurityGroupId:
     Description: EC2 security group ID
     Value: !Ref Ec2SecurityGroupId
+  DbEndpointAddress:
+    Condition: CanCreateDatabase
+    Description: PostgreSQL endpoint address
+    Value: !GetAtt PostgresDb.Endpoint.Address
+  DbEndpointPort:
+    Condition: CanCreateDatabase
+    Description: PostgreSQL endpoint port
+    Value: !GetAtt PostgresDb.Endpoint.Port
+  DbSecretArn:
+    Condition: CanCreateDatabase
+    Description: Secrets Manager ARN containing PostgreSQL credentials
+    Value: !GetAtt PostgresDb.MasterUserSecret.SecretArn

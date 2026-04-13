@@ -6,6 +6,14 @@
     "Ec2SecurityGroupId": "sg-0385ece0cc87f4c27",
     "KeyPairName": "",
     "Ec2InstanceType": "t3.micro",
-    "AmiId": "ami-0fd6ebf15115f8904"
+    "AmiId": "ami-0fd6ebf15115f8904",
+    "CreateDatabase": "true",
+    "DbSubnetIdA": "subnet-05cc66a26d9010d57",
+    "DbSubnetIdB": "subnet-097baadeab35acf20",
+    "DbInstanceClass": "db.t3.micro",
+    "DbAllocatedStorage": 20,
+    "DbName": "djangodb",
+    "DbMasterUsername": "djangoadmin",
+    "DbPubliclyAccessible": "false"
   }
 }

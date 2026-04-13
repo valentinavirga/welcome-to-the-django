@@ -76,10 +76,10 @@ jobs:
           aws iam get-role --role-name "${DEPLOY_ROLE_NAME}" --no-cli-pager >/dev/null
           aws iam get-role --role-name "${CFN_EXEC_ROLE_NAME}" --no-cli-pager >/dev/null
 
-      - name: Validate template is EC2-only
+      - name: Validate template
         run: |
           set -euo pipefail
-          if grep -Eq 'GitHubActionsDeployRole|CloudFormationExecutionRole|AWS::RDS::|AWS::S3::Bucket|BootstrapOnly|CreateDatabase' infra/cloudformation/template.yml; then
+          if grep -Eq 'GitHubActionsDeployRole|CloudFormationExecutionRole|AWS::S3::Bucket|BootstrapOnly' infra/cloudformation/template.yml; then
             echo "Template still contains legacy resources/parameters."
             exit 1
           fi
