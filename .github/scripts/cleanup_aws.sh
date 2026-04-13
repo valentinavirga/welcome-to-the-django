@@ -14,6 +14,8 @@ if [[ ${#STACKS[@]} -eq 0 ]]; then
   STACKS=("welcome-to-the-django-prod" "welcome-to-the-django-iam")
 fi
 
+ROLES=("welcome-to-the-django-github-actions" "welcome-to-the-django-cfn-execution")
+
 echo "Using region: ${REGION}"
 aws sts get-caller-identity --no-cli-pager --output table
 
@@ -37,11 +39,6 @@ for STACK in "${STACKS[@]}"; do
   fi
 done
 
-if [[ ${#delete_started[@]} -eq 0 ]]; then
-  echo "Nothing to delete."
-  exit 0
-fi
-
 for STACK in "${delete_started[@]}"; do
   echo "Waiting delete complete: ${STACK}"
   aws cloudformation wait stack-delete-complete \
@@ -50,5 +47,59 @@ for STACK in "${delete_started[@]}"; do
     --no-cli-pager
   echo "Deleted: ${STACK}"
 done
+
+for ROLE in "${ROLES[@]}"; do
+  if ! aws iam get-role --role-name "${ROLE}" --no-cli-pager >/dev/null 2>&1; then
+    echo "Role not found: ${ROLE}"
+    continue
+  fi
+
+  echo "Removing managed policies from role: ${ROLE}"
+  mapfile -t ATTACHED_POLICY_ARNS < <(
+    aws iam list-attached-role-policies \
+      --role-name "${ROLE}" \
+      --query 'AttachedPolicies[].PolicyArn' \
+      --output text \
+      --no-cli-pager 2>/dev/null | tr '\t' '\n' | sed '/^$/d'
+  )
+  for POLICY_ARN in "${ATTACHED_POLICY_ARNS[@]}"; do
+    aws iam detach-role-policy \
+      --role-name "${ROLE}" \
+      --policy-arn "${POLICY_ARN}" \
+      --no-cli-pager
+  done
+
+  echo "Removing inline policies from role: ${ROLE}"
+  mapfile -t INLINE_POLICIES < <(
+    aws iam list-role-policies \
+      --role-name "${ROLE}" \
+      --query 'PolicyNames' \
+      --output text \
+      --no-cli-pager 2>/dev/null | tr '\t' '\n' | sed '/^$/d'
+  )
+  for POLICY_NAME in "${INLINE_POLICIES[@]}"; do
+    aws iam delete-role-policy \
+      --role-name "${ROLE}" \
+      --policy-name "${POLICY_NAME}" \
+      --no-cli-pager
+  done
+
+  echo "Deleting role: ${ROLE}"
+  aws iam delete-role --role-name "${ROLE}" --no-cli-pager
+done
+
+OIDC_PROVIDER_ARN="$(aws iam list-open-id-connect-providers \
+  --query "OpenIDConnectProviderList[?contains(Arn, 'token.actions.githubusercontent.com')].Arn | [0]" \
+  --output text \
+  --no-cli-pager 2>/dev/null || true)"
+
+if [[ -n "${OIDC_PROVIDER_ARN}" && "${OIDC_PROVIDER_ARN}" != "None" ]]; then
+  echo "Deleting OIDC provider: ${OIDC_PROVIDER_ARN}"
+  aws iam delete-open-id-connect-provider \
+    --open-id-connect-provider-arn "${OIDC_PROVIDER_ARN}" \
+    --no-cli-pager
+else
+  echo "OIDC provider not found: token.actions.githubusercontent.com"
+fi
 
 echo "Cleanup completed."

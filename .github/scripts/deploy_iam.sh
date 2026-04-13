@@ -81,12 +81,9 @@ DEPLOY_ARGS=(
   --parameter-overrides \
       "GitHubOrg=${GH_ORG}" \
       "GitHubRepo=${GH_REPO}" \
-      "GitHubBranch=${GH_BRANCH}"
+      "GitHubBranch=${GH_BRANCH}" \
+      "ExistingGitHubOidcProviderArn=${EXISTING_OIDC_PROVIDER_ARN}"
 )
-
-if [[ -n "${EXISTING_OIDC_PROVIDER_ARN}" ]]; then
-  DEPLOY_ARGS+=("ExistingGitHubOidcProviderArn=${EXISTING_OIDC_PROVIDER_ARN}")
-fi
 
 aws cloudformation deploy "${DEPLOY_ARGS[@]}" --no-cli-pager
 DEPLOY_EXIT=$?

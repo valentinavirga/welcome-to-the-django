@@ -17,8 +17,12 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
       CF_STACK_NAME: ${{ secrets.CF_STACK_NAME != '' && secrets.CF_STACK_NAME || 'welcome-to-the-django-prod' }}
       CF_DEPLOY_ROLE_ARN: ${{ secrets.CF_DEPLOY_ROLE_ARN }}
+      GITHUB_ORG: ${{ github.repository_owner }}
+      GITHUB_REPO: ${{ github.event.repository.name }}
+      GITHUB_BRANCH: main
       RESOLVED_AWS_ROLE_TO_ASSUME: ${{ contains(secrets.AWS_ROLE_TO_ASSUME, 'arn:aws:iam::') && secrets.AWS_ROLE_TO_ASSUME || format('arn:aws:iam::{0}:role/{1}', secrets.AWS_ACCOUNT_ID, secrets.AWS_ROLE_TO_ASSUME) }}
     steps:
       - name: Checkout
@@ -31,6 +35,14 @@ jobs:
             echo "Missing AWS_REGION secret."
             exit 1
           fi
+          if [[ -z "${RESOLVED_AWS_ROLE_TO_ASSUME}" ]]; then
+            echo "Missing AWS_ROLE_TO_ASSUME secret."
+            exit 1
+          fi
+          if [[ ! "${RESOLVED_AWS_ROLE_TO_ASSUME}" =~ ^arn:aws:iam::[0-9]{12}:role/.+ ]]; then
+            echo "Deploy role ARN is invalid: ${RESOLVED_AWS_ROLE_TO_ASSUME}"
+            exit 1
+          fi
           if [[ -n "${CF_DEPLOY_ROLE_ARN}" && ! "${CF_DEPLOY_ROLE_ARN}" =~ ^arn:aws:iam::[0-9]{12}:role/.+ ]]; then
             echo "CF_DEPLOY_ROLE_ARN is not a valid IAM role ARN."
             exit 1
@@ -41,6 +53,45 @@ jobs:
           fi
 
       - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.RESOLVED_AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Ensure IAM roles exist
+        run: |
+          set -euo pipefail
+
+          DEPLOY_ROLE_NAME="${RESOLVED_AWS_ROLE_TO_ASSUME##*/}"
+          if [[ -n "${CF_DEPLOY_ROLE_ARN}" ]]; then
+            CFN_EXEC_ROLE_NAME="${CF_DEPLOY_ROLE_ARN##*/}"
+          else
+            CFN_EXEC_ROLE_NAME="welcome-to-the-django-cfn-execution"
+          fi
+
+          missing_roles=0
+
+          if ! aws iam get-role --role-name "${DEPLOY_ROLE_NAME}" --no-cli-pager >/dev/null 2>&1; then
+            echo "Missing IAM role: ${DEPLOY_ROLE_NAME}"
+            missing_roles=1
+          fi
+
+          if ! aws iam get-role --role-name "${CFN_EXEC_ROLE_NAME}" --no-cli-pager >/dev/null 2>&1; then
+            echo "Missing IAM role: ${CFN_EXEC_ROLE_NAME}"
+            missing_roles=1
+          fi
+
+          if [[ ${missing_roles} -eq 1 ]]; then
+            echo "IAM roles missing: running IAM bootstrap deploy..."
+            bash .github/scripts/deploy_iam.sh
+          else
+            echo "IAM roles found: skipping IAM bootstrap deploy."
+          fi
+
+          aws iam get-role --role-name "${DEPLOY_ROLE_NAME}" --no-cli-pager >/dev/null
+          aws iam get-role --role-name "${CFN_EXEC_ROLE_NAME}" --no-cli-pager >/dev/null
+
+      - name: Configure AWS credentials (deploy)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ env.RESOLVED_AWS_ROLE_TO_ASSUME }}
