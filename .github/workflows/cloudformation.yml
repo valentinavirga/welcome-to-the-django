@@ -91,12 +91,6 @@ jobs:
           aws iam get-role --role-name "${DEPLOY_ROLE_NAME}" --no-cli-pager >/dev/null
           aws iam get-role --role-name "${CFN_EXEC_ROLE_NAME}" --no-cli-pager >/dev/null
 
-      - name: Configure AWS credentials (deploy)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ env.RESOLVED_AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }}
-
       - name: Validate template is EC2-only
         run: |
           set -euo pipefail
