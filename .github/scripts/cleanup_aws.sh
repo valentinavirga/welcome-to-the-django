@@ -49,42 +49,15 @@ for STACK in "${delete_started[@]}"; do
 done
 
 for ROLE in "${ROLES[@]}"; do
-  if ! aws iam get-role --role-name "${ROLE}" --no-cli-pager >/dev/null 2>&1; then
-    echo "Role not found: ${ROLE}"
-    continue
-  fi
-
-  echo "Removing managed policies from role: ${ROLE}"
-  mapfile -t ATTACHED_POLICY_ARNS < <(
-    aws iam list-attached-role-policies \
-      --role-name "${ROLE}" \
-      --query 'AttachedPolicies[].PolicyArn' \
-      --output text \
-      --no-cli-pager 2>/dev/null | tr '\t' '\n' | sed '/^$/d'
-  )
+  aws iam get-role --role-name "${ROLE}" --no-cli-pager >/dev/null 2>&1 || continue
+  mapfile -t ATTACHED_POLICY_ARNS < <(aws iam list-attached-role-policies --role-name "${ROLE}" --query 'AttachedPolicies[].PolicyArn' --output text --no-cli-pager 2>/dev/null | tr '\t' '\n' | sed '/^$/d')
   for POLICY_ARN in "${ATTACHED_POLICY_ARNS[@]}"; do
-    aws iam detach-role-policy \
-      --role-name "${ROLE}" \
-      --policy-arn "${POLICY_ARN}" \
-      --no-cli-pager
+    aws iam detach-role-policy --role-name "${ROLE}" --policy-arn "${POLICY_ARN}" --no-cli-pager
   done
-
-  echo "Removing inline policies from role: ${ROLE}"
-  mapfile -t INLINE_POLICIES < <(
-    aws iam list-role-policies \
-      --role-name "${ROLE}" \
-      --query 'PolicyNames' \
-      --output text \
-      --no-cli-pager 2>/dev/null | tr '\t' '\n' | sed '/^$/d'
-  )
+  mapfile -t INLINE_POLICIES < <(aws iam list-role-policies --role-name "${ROLE}" --query 'PolicyNames' --output text --no-cli-pager 2>/dev/null | tr '\t' '\n' | sed '/^$/d')
   for POLICY_NAME in "${INLINE_POLICIES[@]}"; do
-    aws iam delete-role-policy \
-      --role-name "${ROLE}" \
-      --policy-name "${POLICY_NAME}" \
-      --no-cli-pager
+    aws iam delete-role-policy --role-name "${ROLE}" --policy-name "${POLICY_NAME}" --no-cli-pager
   done
-
-  echo "Deleting role: ${ROLE}"
   aws iam delete-role --role-name "${ROLE}" --no-cli-pager
 done
 

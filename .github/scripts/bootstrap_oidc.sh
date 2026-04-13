@@ -29,9 +29,9 @@ fi
 
 ACCOUNT_ID="$(aws sts get-caller-identity --query 'Account' --output text --no-cli-pager)"
 
-GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
-BOOTSTRAP_ROLE_NAME="${BOOTSTRAP_ROLE_NAME:-welcome-to-the-django-bootstrap-oidc}"
-BOOTSTRAP_POLICY_ARN="${BOOTSTRAP_POLICY_ARN:-arn:aws:iam::aws:policy/AdministratorAccess}"
+GITHUB_BRANCH="main"
+BOOTSTRAP_ROLE_NAME="welcome-to-the-django-bootstrap-oidc"
+BOOTSTRAP_POLICY_ARN="arn:aws:iam::aws:policy/AdministratorAccess"
 
 OIDC_PROVIDER_ARN="$(aws iam list-open-id-connect-providers \
   --query "OpenIDConnectProviderList[?contains(Arn, 'token.actions.githubusercontent.com')].Arn | [0]" \
@@ -48,7 +48,7 @@ if [[ -z "${OIDC_PROVIDER_ARN}" || "${OIDC_PROVIDER_ARN}" == "None" ]]; then
     --output text \
     --no-cli-pager)"
 else
-  echo "Reusing existing OIDC provider: ${OIDC_PROVIDER_ARN}"
+  echo "OIDC provider exists: ${OIDC_PROVIDER_ARN}"
 fi
 
 TRUST_DOC="$(mktemp)"
@@ -107,13 +107,10 @@ ATTACHED_POLICIES="$(aws iam list-attached-role-policies \
   --no-cli-pager 2>/dev/null || true)"
 
 if [[ " ${ATTACHED_POLICIES} " != *" ${BOOTSTRAP_POLICY_ARN} "* ]]; then
-  echo "Attaching policy: ${BOOTSTRAP_POLICY_ARN}"
   aws iam attach-role-policy \
     --role-name "${BOOTSTRAP_ROLE_NAME}" \
     --policy-arn "${BOOTSTRAP_POLICY_ARN}" \
     --no-cli-pager
-else
-  echo "Policy already attached: ${BOOTSTRAP_POLICY_ARN}"
 fi
 
 echo ""
