@@ -43,7 +43,7 @@ jobs:
           role-to-assume: ${{ env.RESOLVED_AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Ensure IAM roles exist
+      - name: Ensure IAM roles and policies are up to date
         run: |
           set -euo pipefail
 
@@ -67,11 +67,11 @@ jobs:
           fi
 
           if [[ ${missing_roles} -eq 1 ]]; then
-            echo "IAM roles missing: running IAM bootstrap deploy..."
-            bash .github/scripts/deploy_iam.sh
-          else
-            echo "IAM roles found: skipping IAM bootstrap deploy."
+            echo "IAM roles missing."
           fi
+
+          echo "Running IAM deploy to ensure latest role policies..."
+          bash .github/scripts/deploy_iam.sh
 
           aws iam get-role --role-name "${DEPLOY_ROLE_NAME}" --no-cli-pager >/dev/null
           aws iam get-role --role-name "${CFN_EXEC_ROLE_NAME}" --no-cli-pager >/dev/null

@@ -163,7 +163,7 @@ Resources:
       ManageMasterUserPassword: true
       PubliclyAccessible: !If [DbPublicAccessEnabled, true, false]
       MultiAZ: false
-      BackupRetentionPeriod: 7
+      BackupRetentionPeriod: 0
       AutoMinorVersionUpgrade: true
       DeletionProtection: false
       VPCSecurityGroups:

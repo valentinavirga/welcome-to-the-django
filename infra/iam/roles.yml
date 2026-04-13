@@ -104,6 +104,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - rds:Describe*
+                  - rds:DescribeDBSubnetGroups
                   - rds:CreateDBInstance
                   - rds:ModifyDBInstance
                   - rds:DeleteDBInstance
