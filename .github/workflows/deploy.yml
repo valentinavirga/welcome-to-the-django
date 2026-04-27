@@ -3,6 +3,14 @@ name: Deploy Monolith
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-north-1
 
 jobs:
   terraform:
@@ -12,6 +20,12 @@ jobs:
       instance_ip: ${{ steps.set-ip.outputs.instance_ip }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -25,8 +39,6 @@ jobs:
           terraform init
           terraform apply -auto-approve
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
           TF_VAR_deploy_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
 
       - name: Export IP
