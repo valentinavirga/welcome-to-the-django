@@ -32,6 +32,26 @@ jobs:
         with:
           terraform_version: "1.7.0"
 
+      - name: Validate SSH key pair from secrets
+        run: |
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+
+          DERIVED_PUBLIC="$(ssh-keygen -y -f /tmp/deploy_key | awk '{print $1" "$2}')"
+          EXPECTED_PUBLIC="$(printf '%s\n' "${{ secrets.SSH_PUBLIC_KEY }}" | awk '{print $1" "$2}')"
+
+          if [ -z "$DERIVED_PUBLIC" ] || [ -z "$EXPECTED_PUBLIC" ]; then
+            echo "Chiavi SSH non valide nei secret"
+            exit 1
+          fi
+
+          if [ "$DERIVED_PUBLIC" != "$EXPECTED_PUBLIC" ]; then
+            echo "SSH_PRIVATE_KEY e SSH_PUBLIC_KEY non appartengono alla stessa coppia"
+            exit 1
+          fi
+
+          echo "Coppia chiavi SSH valida"
+
       - name: Terraform Apply
         id: apply
         run: |
@@ -55,17 +75,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4 # Aggiornato a v4
 
-      - name: Wait for SSH
+      - name: Wait for SSH auth
         run: |
-          for i in {1..30}; do
-            if nc -z "${{ needs.terraform.outputs.instance_ip }}" 22; then
-              echo "SSH disponibile"
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+
+          for i in {1..36}; do
+            if ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i /tmp/deploy_key deploy@"${{ needs.terraform.outputs.instance_ip }}" 'echo ready' >/dev/null 2>&1; then
+              echo "SSH autenticato e pronto"
               exit 0
             fi
-            echo "Attendo SSH... tentativo $i/30"
+            echo "Attendo provisioning utente deploy/authorized_keys... tentativo $i/36"
             sleep 10
           done
-          echo "SSH non disponibile in tempo utile"
+
+          echo "SSH non pronto in tempo utile"
           exit 1
 
       - name: Deploy to EC2
