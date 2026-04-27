@@ -2,6 +2,8 @@ provider "aws" {
   region = "eu-north-1"
 }
 
+data "aws_caller_identity" "current" {}
+
 resource "aws_security_group" "web_sg" {
   name_prefix = "allow-web-and-ssh-"
   description = "Permetti SSH e traffico Django"
@@ -49,7 +51,7 @@ data "aws_ami" "ubuntu" {
 }
 
 resource "aws_key_pair" "deploy_key" {
-  key_name   = "deploy-key"
+  key_name   = "deploy-key-${data.aws_caller_identity.current.account_id}"
   public_key = var.deploy_ssh_public_key
 }
 
