@@ -2,7 +2,7 @@ name: Deploy Monolith
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -71,9 +71,9 @@ jobs:
             echo "DB_USER=${{ secrets.DB_USER }}" >> .env
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
             echo "DATABASE_URL=postgres://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@db:5432/${{ secrets.DB_NAME }}" >> .env
-            
+
             # Deploy con Docker Compose
             docker-compose up -d --build
-            
+
             # Migrazioni Django
             docker-compose exec -T web python manage.py migrate --noinput
