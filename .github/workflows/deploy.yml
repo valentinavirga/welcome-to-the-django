@@ -55,6 +55,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4 # Aggiornato a v4
 
+      - name: Wait for SSH
+        run: |
+          for i in {1..30}; do
+            if nc -z "${{ needs.terraform.outputs.instance_ip }}" 22; then
+              echo "SSH disponibile"
+              exit 0
+            fi
+            echo "Attendo SSH... tentativo $i/30"
+            sleep 10
+          done
+          echo "SSH non disponibile in tempo utile"
+          exit 1
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
