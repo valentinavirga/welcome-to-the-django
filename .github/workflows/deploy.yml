@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 env:
-  AWS_REGION: eu-north-1
+  AWS_REGION: ${{ secrets.AWS_REGION || 'eu-north-1' }}
 
 jobs:
   terraform:
@@ -40,6 +40,7 @@ jobs:
           terraform apply -auto-approve
         env:
           TF_VAR_deploy_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+          TF_VAR_aws_region: ${{ env.AWS_REGION }}
 
       - name: Export IP
         id: set-ip
