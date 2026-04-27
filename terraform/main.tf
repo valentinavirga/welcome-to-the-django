@@ -51,7 +51,7 @@ data "aws_ami" "ubuntu" {
 }
 
 resource "aws_key_pair" "deploy_key" {
-  key_name   = "deploy-key-${data.aws_caller_identity.current.account_id}"
+  key_name_prefix = "deploy-key-"
   public_key = var.deploy_ssh_public_key
 }
 
