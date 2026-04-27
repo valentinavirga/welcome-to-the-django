@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 resource "aws_security_group" "web_sg" {
-  name        = "allow_web_and_ssh"
+  name_prefix = "allow-web-and-ssh-"
   description = "Permetti SSH e traffico Django"
 
   ingress {
