@@ -1,0 +1,67 @@
+name: Deploy Monolith
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  terraform:
+    name: "Terraform Infrastructure"
+    runs-on: ubuntu-latest
+    outputs:
+      instance_ip: ${{ steps.set-ip.outputs.instance_ip }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+
+      - name: Terraform Apply
+        id: apply
+        run: |
+          cd terraform
+          terraform init
+          terraform apply -auto-approve
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_KEY }}
+          TF_VAR_deploy_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+
+      - name: Export IP
+        id: set-ip
+        run: |
+          cd terraform
+          echo "instance_ip=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
+
+  deploy:
+    name: "Application Deploy"
+    needs: terraform
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4 # Aggiornato a v4
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ needs.terraform.outputs.instance_ip }}
+          username: deploy
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            mkdir -p ~/app
+            cd ~/app
+
+            # Configurazione variabili d'ambiente
+            echo "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" > .env
+            echo "ALLOWED_HOSTS=${{ needs.terraform.outputs.instance_ip }},localhost" >> .env
+            echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            echo "DATABASE_URL=postgres://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@db:5432/${{ secrets.DB_NAME }}" >> .env
+            
+            # Deploy con Docker Compose
+            docker-compose up -d --build
+            
+            # Migrazioni Django
+            docker-compose exec -T web python manage.py migrate --noinput

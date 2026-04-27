@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DevOps Test - {{ testo }}</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            overflow: hidden;
+        }
+        #hello-text {
+            font-size: 5rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="hello-text">{{ testo }}</h1>
+
+    <script>
+        const text = document.getElementById('hello-text');
+        const fonts = ['Arial', 'Courier New', 'Georgia', 'Verdana', 'Impact'];
+        
+        setInterval(() => {
+            const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
+            const randomFont = fonts[Math.floor(Math.random() * fonts.length)];
+            
+            text.style.color = randomColor;
+            text.style.fontFamily = randomFont;
+        }, 1000);
+    </script>
+</body>
+</html>

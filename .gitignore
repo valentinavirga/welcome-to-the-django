@@ -1,0 +1,31 @@
+# --- Python & Django ---
+__pycache__/
+*.pyc
+db.sqlite3
+staticfiles/
+media/
+.env
+venv/
+.venv/
+
+# --- Terraform ---
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.tfvars.json
+.terraform.lock.hcl
+
+# --- Chiavi SSH (MOLTO IMPORTANTE) ---
+# Se hai generato le chiavi nella cartella del progetto, ignorale!
+deploy_key
+deploy_key.pub
+id_rsa*
+
+# --- OS & IDE ---
+.DS_Store
+.vscode/
+.idea/
+
+
+oggi
