@@ -129,5 +129,22 @@ jobs:
             # Deploy con Docker Compose
             $COMPOSE_CMD up -d --build
 
+            # Attendi che Postgres sia pronto prima delle migrazioni
+            for i in $(seq 1 30); do
+              if $COMPOSE_CMD exec -T db pg_isready -U "${{ secrets.DB_USER }}" -d "${{ secrets.DB_NAME }}" >/dev/null 2>&1; then
+                echo "Postgres pronto"
+                break
+              fi
+
+              if [ "$i" -eq 30 ]; then
+                echo "Postgres non pronto in tempo utile"
+                $COMPOSE_CMD logs db --tail=200 || true
+                exit 1
+              fi
+
+              echo "Attendo Postgres... tentativo $i/30"
+              sleep 5
+            done
+
             # Migrazioni Django
             $COMPOSE_CMD exec -T web python manage.py migrate --noinput
