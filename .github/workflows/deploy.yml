@@ -113,8 +113,10 @@ jobs:
             git reset --hard "origin/${{ github.ref_name }}"
 
             # Configurazione variabili d'ambiente
+            PUBLIC_IP="$(curl -sf https://checkip.amazonaws.com || echo '*')"
             echo "DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}" > .env
-            echo "ALLOWED_HOSTS=${{ needs.terraform.outputs.instance_ip }},localhost" >> .env
+            echo "DEBUG=True" >> .env
+            echo "ALLOWED_HOSTS=${PUBLIC_IP},localhost,127.0.0.1,*" >> .env
             echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
             echo "DB_USER=${{ secrets.DB_USER }}" >> .env
             echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
@@ -148,3 +150,6 @@ jobs:
 
             # Migrazioni Django
             $COMPOSE_CMD exec -T web python manage.py migrate --noinput
+
+            echo "=== web logs (ultimi 50) ==="
+            $COMPOSE_CMD logs web --tail=50 || true
